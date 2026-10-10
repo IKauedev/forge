@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: starter-api
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  cloud:
+    openfeign:
+      client:
+        config:
+          viacep:
+            connect-timeout: 2000
+            read-timeout: 3000
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+clients:
+  viacep:
+    url: https://viacep.com.br/ws
+    impl: feign # feign | webclient
+    read-timeout-ms: 3000
+    retry:
+      max-retries: 2
+      delay-ms: 200

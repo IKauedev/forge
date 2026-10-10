@@ -80,6 +80,10 @@ Antes de fixar versões, verifique a compatibilidade Spring Boot x Spring Cloud 
 documentação oficial. Mostre o plano e espere minha aprovação antes de implementar.
 ```
 
+**Notas de execução (2026-10-10)**
+- Versões fixadas: Spring Boot 4.1.1, Spring Cloud 2025.1.3, Java 25, MapStruct 1.6.3, Testcontainers 2.0.5 (BOM do Boot), WireMock 3.13.2.
+- Desvio: não existe starter Resilience4j para Spring Boot 4. O template usa o resilience nativo do Spring Framework 7 (`@Retryable` + `@EnableResilientMethods`, configurado por propriedades `clients.viacep.retry.*`). **Circuit breaker ficou de fora**; revisitar quando houver suporte oficial.
+
 **Critérios de aceite**
 - `./mvnw -q verify` verde (testes, Spotless, ArchUnit, JaCoCo).
 - Trocar `clients.viacep.impl` entre `feign` e `webclient` funciona (teste cobrindo ambos).
