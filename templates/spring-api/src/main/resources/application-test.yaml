@@ -1,7 +1,9 @@
+# forge:if auth!=none
 app:
   security:
     dev-secret: test-only-secret-0123456789-0123456789
 
+# forge:end
 clients:
   viacep:
     retry:

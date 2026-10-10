@@ -7,10 +7,12 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfig {
-
   @Bean
   @ServiceConnection
   PostgreSQLContainer postgres() {
     return new PostgreSQLContainer("postgres:17-alpine");
   }
+
+  // Alternativas fora do estado de referência usam nomes totalmente qualificados, porque o
+  // Spotless remove imports sem uso no template.
 }

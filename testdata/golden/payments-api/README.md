@@ -58,3 +58,5 @@ O claim de roles é configurável em `app.security.roles-claim` (padrão `roles`
 
 Valem em métodos e classes. `SecurityUtils.currentUser()` devolve o `CurrentUser` (subject, username, roles,
 scopes) para uso em adapters. Evite `@PostAuthorize` em métodos que gravam no banco.
+
+

@@ -5,8 +5,10 @@ spring:
     compose:
       enabled: true
       lifecycle-management: start-only
+# forge:if auth!=none
 
 app:
   security:
     # Somente desenvolvimento: segredo HS256 do /dev/token. Nunca use fora do perfil local.
     dev-secret: local-dev-only-secret-change-me-0123456789
+# forge:end

@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 @Service
 @Primary
 public class AddressApplicationService implements LookupAddressUseCase {
-
   private static final Logger log = LoggerFactory.getLogger(AddressApplicationService.class);
 
   private final AddressLookupService domainService;

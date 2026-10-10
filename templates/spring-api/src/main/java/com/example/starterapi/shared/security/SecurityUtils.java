@@ -36,7 +36,7 @@ public final class SecurityUtils {
 
   private static String username(Authentication auth) {
     if (auth.getPrincipal() instanceof Jwt jwt) {
-      for (String claim : new String[] {"preferred_username", "email"}) {
+      for (String claim : new String[] {"preferred_username", "cognito:username", "email"}) {
         String value = jwt.getClaimAsString(claim);
         if (value != null && !value.isBlank()) {
           return value;

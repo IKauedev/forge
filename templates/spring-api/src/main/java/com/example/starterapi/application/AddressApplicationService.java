@@ -5,6 +5,7 @@ import com.example.starterapi.domain.port.in.LookupAddressUseCase;
 import com.example.starterapi.domain.service.AddressLookupService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,9 @@ public class AddressApplicationService implements LookupAddressUseCase {
   }
 
   @Override
+  // forge:if cache!=none
+  @Cacheable("addresses")
+  // forge:end
   public Address lookup(String cep) {
     log.info("Consultando endereço");
     return domainService.lookup(cep);

@@ -1,3 +1,9 @@
 bin/
 *.exe
 templates/*/target/
+testdata/**/target/
+.vscode/
+testdata/**/.settings/
+testdata/**/.project
+testdata/**/.classpath
+testdata/**/.factorypath

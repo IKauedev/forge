@@ -8,9 +8,10 @@ func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "forge",
 		Short:         "Gera projetos Spring Boot pré-configurados",
+		Version:       Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.AddCommand(newNewCmd())
+	root.AddCommand(newNewCmd(), newListCmd(), newDoctorCmd())
 	return root
 }

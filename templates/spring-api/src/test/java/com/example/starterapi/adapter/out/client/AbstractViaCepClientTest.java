@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.starterapi.TestcontainersConfig;
+import com.example.starterapi.adapter.out.persistence.SpringDataAddressRepository;
 import com.example.starterapi.shared.CorrelationId;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -27,6 +28,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /** Cenários comuns às duas implementações do cliente ViaCEP (feign e webclient). */
 @SpringBootTest
@@ -39,6 +41,10 @@ abstract class AbstractViaCepClientTest {
 
   @Autowired MockMvc mvc;
 
+  // forge:if cache!=none
+  @Autowired SpringDataAddressRepository repository;
+
+  // forge:end
   @BeforeAll
   static void startWireMock() {
     wireMock = new WireMockServer(WireMockConfiguration.options().dynamicPort());
@@ -76,7 +82,7 @@ abstract class AbstractViaCepClientTest {
                          "bairro":"Sé","localidade":"São Paulo","uf":"SP"}
                         """)));
 
-    mvc.perform(get("/api/addresses/01001-000").with(jwt()).header(CorrelationId.HEADER, "abc-123"))
+    mvc.perform(authed(get("/api/addresses/01001-000")).header(CorrelationId.HEADER, "abc-123"))
         .andExpect(status().isOk())
         .andExpect(header().string(CorrelationId.HEADER, "abc-123"))
         .andExpect(jsonPath("$.cep").value("01001000"))
@@ -97,7 +103,7 @@ abstract class AbstractViaCepClientTest {
                     .withHeader("Content-Type", "application/json")
                     .withBody("{\"erro\":true}")));
 
-    mvc.perform(get("/api/addresses/99999999").with(jwt())).andExpect(status().isNotFound());
+    mvc.perform(authed(get("/api/addresses/99999999"))).andExpect(status().isNotFound());
   }
 
   @Test
@@ -105,8 +111,7 @@ abstract class AbstractViaCepClientTest {
     wireMock.stubFor(
         WireMock.get(urlEqualTo("/30130010/json")).willReturn(aResponse().withStatus(500)));
 
-    mvc.perform(get("/api/addresses/30130010").with(jwt()))
-        .andExpect(status().isServiceUnavailable());
+    mvc.perform(authed(get("/api/addresses/30130010"))).andExpect(status().isServiceUnavailable());
 
     // 1 tentativa + 2 retries (clients.viacep.retry.max-retries=2)
     wireMock.verify(3, getRequestedFor(urlEqualTo("/30130010/json")));
@@ -125,9 +130,46 @@ abstract class AbstractViaCepClientTest {
                          "bairro":"Centro","localidade":"Rio de Janeiro","uf":"RJ"}
                         """)));
 
-    mvc.perform(get("/api/addresses/20040020").with(jwt())).andExpect(status().isOk());
-    mvc.perform(get("/api/addresses/20040020").with(jwt())).andExpect(status().isOk());
+    mvc.perform(authed(get("/api/addresses/20040020"))).andExpect(status().isOk());
+    mvc.perform(authed(get("/api/addresses/20040020"))).andExpect(status().isOk());
 
     wireMock.verify(1, getRequestedFor(urlEqualTo("/20040020/json")));
   }
+
+  // forge:if cache!=none
+  @Test
+  void secondRequestIsServedFromCache() throws Exception {
+    wireMock.stubFor(
+        WireMock.get(urlEqualTo("/01310100/json"))
+            .willReturn(
+                aResponse()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(
+                        """
+                        {"cep":"01310-100","logradouro":"Avenida Paulista","complemento":"",
+                         "bairro":"Bela Vista","localidade":"São Paulo","uf":"SP"}
+                        """)));
+
+    mvc.perform(authed(get("/api/addresses/01310100"))).andExpect(status().isOk());
+
+    // sem banco e sem ViaCEP, só o cache consegue responder
+    repository.deleteAll();
+    wireMock.resetAll();
+
+    mvc.perform(authed(get("/api/addresses/01310100")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.street").value("Avenida Paulista"));
+  }
+
+  // forge:end
+  // forge:if auth!=none
+  private static MockHttpServletRequestBuilder authed(MockHttpServletRequestBuilder request) {
+    return request.with(jwt());
+  }
+
+  // forge:else
+  // ~ private static MockHttpServletRequestBuilder authed(MockHttpServletRequestBuilder request) {
+  // ~   return request;
+  // ~ }
+  // forge:end
 }

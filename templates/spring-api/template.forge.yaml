@@ -1,0 +1,55 @@
+# Manifesto do template. Lido pelo forge; nunca é copiado para o projeto gerado.
+#
+# O template COMPILA sozinho no estado de "reference". Variações usam diretivas em comentários
+# (forge:if / forge:else / forge:end) e ramos alternativos comentados com "~" (//~, #~, <!--~ -->).
+name: spring-api
+description: API Spring Boot hexagonal com Java 25, Flyway, Testcontainers e ArchUnit
+
+options:
+  - name: http
+    description: Cliente HTTP do módulo de exemplo (ViaCEP)
+    values: [feign, webclient, both]
+    default: both
+  - name: auth
+    description: Autenticação (jwt = resource server; cognito = jwt ajustado ao Amazon Cognito)
+    values: [none, jwt, cognito]
+    default: jwt
+  - name: cache
+    description: Cache da consulta de CEP
+    values: [none, caffeine, redis]
+    default: none
+
+# Estado em que o template de referência compila e é testado sem passar pelo forge.
+reference:
+  http: both
+  auth: jwt
+  cache: caffeine
+
+remove:
+  - when: http=feign
+    paths:
+      - src/main/java/com/example/starterapi/adapter/out/client/ViaCepWebClientAdapter.java
+      - src/test/java/com/example/starterapi/adapter/out/client/ViaCepWebClientTest.java
+  - when: http=webclient
+    paths:
+      - src/main/java/com/example/starterapi/adapter/out/client/ViaCepFeignAdapter.java
+      - src/main/java/com/example/starterapi/adapter/out/client/ViaCepFeignClient.java
+      - src/main/java/com/example/starterapi/adapter/out/client/CorrelationIdFeignInterceptor.java
+      - src/test/java/com/example/starterapi/adapter/out/client/ViaCepFeignClientTest.java
+  - when: auth=none
+    paths:
+      - src/main/java/com/example/starterapi/shared/security/
+      - src/main/java/com/example/starterapi/config/SecurityConfig.java
+      - src/main/java/com/example/starterapi/config/MethodSecurityConfig.java
+      - src/main/java/com/example/starterapi/config/ProblemDetailSecurityHandler.java
+      - src/main/java/com/example/starterapi/config/DevJwtConfig.java
+      - src/main/java/com/example/starterapi/config/OpenApiConfig.java
+      - src/main/java/com/example/starterapi/adapter/in/web/MeController.java
+      - src/main/java/com/example/starterapi/adapter/in/web/AdminController.java
+      - src/main/java/com/example/starterapi/adapter/in/web/DevTokenController.java
+      - src/test/java/com/example/starterapi/shared/security/
+      - src/test/java/com/example/starterapi/adapter/in/web/SecurityEndpointsTest.java
+      - src/test/java/com/example/starterapi/adapter/in/web/DevTokenControllerTest.java
+  - when: cache=none
+    paths:
+      - src/main/java/com/example/starterapi/config/CacheConfig.java

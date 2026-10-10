@@ -257,6 +257,13 @@ Fase 6 do docs/PLAN.md. Modo plano primeiro.
 - Atualizar a matriz de smoke test (escolher combinações representativas, não todas).
 ```
 
+**Notas de execução (2026-10-10)**
+- Feita antes das Fases 3, 4 e 5. Como `--db` ainda não existe, o `.forge.yaml` não tem `db` (entra na Fase 3).
+- Variação por diretivas em comentários + manifesto `template.forge.yaml` (ver README). `--auth cognito` = jwt com roles de `cognito:groups`; `--cache redis` inclui Redis no compose e nos testes.
+- Padrões de `forge new`: `http=both`, `auth=jwt`, `cache=none`. Sem terminal, nunca pergunta (usa os padrões).
+- Mínimos do doctor: Java 25, Terraform 1.10, Node 22; Terraform e Node a reconfirmar nas Fases 5 e 7.
+- Matriz de smoke: `both/jwt/none`, `feign/none/none`, `webclient/cognito/caffeine`, `feign/jwt/redis`.
+
 **Critérios de aceite**
 - Fluxo interativo e não interativo geram saídas idênticas para as mesmas respostas (teste golden).
 - `forge doctor` reporta corretamente um ambiente sem Docker (teste com PATH manipulado).

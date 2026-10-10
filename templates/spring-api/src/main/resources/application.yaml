@@ -10,6 +10,7 @@ spring:
       enabled: false
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  # forge:if http=feign,both
   cloud:
     openfeign:
       client:
@@ -17,6 +18,19 @@ spring:
           viacep:
             connect-timeout: 2000
             read-timeout: 3000
+  # forge:end
+  # forge:if cache=caffeine
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=10m
+  # forge:end
+  # forge:if cache=redis
+  #~ cache:
+  #~   type: redis
+  #~   redis:
+  #~     time-to-live: 10m
+  # forge:end
 
 server:
   shutdown: graceful
@@ -37,14 +51,24 @@ springdoc:
   swagger-ui:
     enabled: false
 
+# forge:if auth!=none
 app:
   security:
+    # forge:if auth=cognito
+    #~ roles-claim: "cognito:groups" # grupos do user pool viram roles
+    # forge:else
     roles-claim: roles # claim do JWT com as roles (ex.: cognito:groups)
+    # forge:end
 
+# forge:end
 clients:
   viacep:
     url: https://viacep.com.br/ws
+    # forge:if http=webclient
+    #~ impl: webclient
+    # forge:else
     impl: feign # feign | webclient
+    # forge:end
     read-timeout-ms: 3000
     retry:
       max-retries: 2

@@ -14,13 +14,16 @@ import org.springframework.cloud.openfeign.FeignClientBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 /** Escolhe a implementação do cliente ViaCEP por clients.viacep.impl (feign | webclient). */
 @Configuration
 public class ViaCepClientConfig {
 
+  // forge:if http=feign,both
   @Configuration
   @ConditionalOnProperty(name = "clients.viacep.impl", havingValue = "feign", matchIfMissing = true)
   static class FeignImpl {
@@ -40,6 +43,8 @@ public class ViaCepClientConfig {
     }
   }
 
+  // forge:end
+  // forge:if http=webclient,both
   @Configuration
   @ConditionalOnProperty(name = "clients.viacep.impl", havingValue = "webclient")
   static class WebClientImpl {
@@ -54,12 +59,10 @@ public class ViaCepClientConfig {
                   request -> {
                     String id = MDC.get(CorrelationId.MDC_KEY);
                     if (id == null) {
-                      return reactor.core.publisher.Mono.just(request);
+                      return Mono.just(request);
                     }
-                    return reactor.core.publisher.Mono.just(
-                        org.springframework.web.reactive.function.client.ClientRequest.from(request)
-                            .header(CorrelationId.HEADER, id)
-                            .build());
+                    return Mono.just(
+                        ClientRequest.from(request).header(CorrelationId.HEADER, id).build());
                   }))
           .build();
     }
@@ -72,4 +75,5 @@ public class ViaCepClientConfig {
       return new ViaCepWebClientAdapter(viaCepWebClient, mapper, Duration.ofMillis(timeoutMs));
     }
   }
+  // forge:end
 }

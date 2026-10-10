@@ -31,6 +31,7 @@ usuário não-root, `MaxRAMPercentage=75` e `ExitOnOutOfMemoryError`.
 O cliente HTTP é escolhido por `clients.viacep.impl` (`feign` | `webclient`).
 Readiness: `/actuator/health/readiness`. Swagger só com o perfil `dev`.
 
+<!-- forge:if auth!=none -->
 ## Segurança (JWT)
 API stateless como *resource server* OAuth2. Tudo exige token, exceto `/actuator/health/**`, `/actuator/info`
 e a documentação OpenAPI. Erros 401/403 saem como `application/problem+json`.
@@ -58,3 +59,23 @@ O claim de roles é configurável em `app.security.roles-claim` (padrão `roles`
 
 Valem em métodos e classes. `SecurityUtils.currentUser()` devolve o `CurrentUser` (subject, username, roles,
 scopes) para uso em adapters. Evite `@PostAuthorize` em métodos que gravam no banco.
+
+<!-- forge:if auth=cognito -->
+<!--~ ### Amazon Cognito -->
+<!--~ -->
+<!--~ Este projeto foi gerado com `--auth cognito`: aponte `JWT_ISSUER_URI` para o user pool -->
+<!--~ (`https://cognito-idp.<regiao>.amazonaws.com/<user-pool-id>`). Os grupos do usuário viram roles -->
+<!--~ (`app.security.roles-claim: "cognito:groups"`) e o username sai de `cognito:username`. -->
+<!--~ Crie o user pool e os grupos `ADMIN`/`USER` fora do projeto (console, CLI ou Terraform). -->
+<!-- forge:end -->
+<!-- forge:end -->
+
+<!-- forge:if cache!=none -->
+## Cache
+`AddressApplicationService.lookup` usa `@Cacheable("addresses")`. Tipo do cache em `spring.cache.type`
+<!-- forge:if cache=redis -->
+<!--~ (`redis`; o `compose.yaml` sobe o Redis e, no perfil `dev`/`prod`, `REDIS_HOST` aponta para ele). -->
+<!-- forge:else -->
+(`caffeine`, em memória, `maximumSize=500,expireAfterWrite=10m`).
+<!-- forge:end -->
+<!-- forge:end -->

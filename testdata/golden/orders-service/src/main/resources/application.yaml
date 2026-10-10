@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: orders-service
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  docker:
+    compose:
+      enabled: false
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  cache:
+    type: redis
+    redis:
+      time-to-live: 10m
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+app:
+  security:
+    roles-claim: "cognito:groups" # grupos do user pool viram roles
+
+clients:
+  viacep:
+    url: https://viacep.com.br/ws
+    impl: webclient
+    read-timeout-ms: 3000
+    retry:
+      max-retries: 2
+      delay-ms: 200

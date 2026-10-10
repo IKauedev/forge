@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/ikauedeveloper/forge/internal/names"
+	"github.com/ikauedeveloper/forge/internal/template"
 )
 
 // Valores de referência presentes nos templates.
@@ -25,6 +26,10 @@ type Options struct {
 	Names   names.Names
 	Package string // pacote base Java, ex.: com.empresa
 	Dest    string // diretório de destino (será criado; deve estar vazio ou não existir)
+
+	// Selection traz as escolhas das opções do template (http, auth, cache...).
+	// O que faltar é completado com os padrões do manifesto.
+	Selection template.Selection
 }
 
 var skippedDirs = map[string]bool{"target": true, ".git": true, "node_modules": true}
@@ -80,17 +85,32 @@ func Generate(src fs.FS, opts Options) ([]string, error) {
 	if err := ensureEmptyDest(opts.Dest); err != nil {
 		return nil, err
 	}
+	manifest, err := template.Load(src)
+	if err != nil {
+		return nil, err
+	}
+	sel, err := manifest.Resolve(opts.Selection)
+	if err != nil {
+		return nil, err
+	}
+	removed, err := manifest.Removed(sel)
+	if err != nil {
+		return nil, err
+	}
 	rep := Replacer(opts.Names, opts.Package)
 
 	var generated []string
-	err := fs.WalkDir(src, ".", func(p string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(src, ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
-			if skippedDirs[d.Name()] {
+			if skippedDirs[d.Name()] || template.IsRemoved(p+"/", removed) {
 				return fs.SkipDir
 			}
+			return nil
+		}
+		if p == template.ManifestFile || template.IsRemoved(p, removed) {
 			return nil
 		}
 		content, err := fs.ReadFile(src, p)
@@ -98,7 +118,11 @@ func Generate(src fs.FS, opts Options) ([]string, error) {
 			return err
 		}
 		if !IsBinary(p, content) {
-			content = []byte(rep.Replace(string(content)))
+			processed, err := ProcessDirectives(p, string(content), sel)
+			if err != nil {
+				return err
+			}
+			content = []byte(rep.Replace(processed))
 		}
 		rel := rep.Replace(p)
 		target := filepath.Join(opts.Dest, filepath.FromSlash(rel))

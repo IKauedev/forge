@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
 @IsAuthenticated
 @RequestMapping("/api/addresses")
 public class AddressController {
-
   private final LookupAddressUseCase lookupAddress;
 
   public AddressController(LookupAddressUseCase lookupAddress) {

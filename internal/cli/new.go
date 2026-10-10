@@ -2,70 +2,169 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
+	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 
 	"github.com/ikauedeveloper/forge/internal/engine"
 	"github.com/ikauedeveloper/forge/internal/names"
+	"github.com/ikauedeveloper/forge/internal/project"
+	"github.com/ikauedeveloper/forge/internal/template"
 	"github.com/ikauedeveloper/forge/templates"
 )
 
+// Version é a versão do forge; o release define via -ldflags "-X .../internal/cli.Version=...".
+var Version = "dev"
+
+const defaultPackage = "com.example"
+
+// Answers reúne tudo o que define um projeto gerado.
+type Answers struct {
+	Name       string
+	Package    string
+	PackageSet bool // o pacote veio de flag (não precisa perguntar)
+	Options    map[string]string
+}
+
+// Prompter completa o que faltar em Answers perguntando ao usuário.
+type Prompter interface {
+	Fill(m *template.Manifest, a *Answers) error
+}
+
+// Variáveis trocadas nos testes.
+var (
+	newPrompter Prompter = huhPrompter{}
+	isTerminal           = stdinIsTerminal
+)
+
 type newFlags struct {
-	pkg   string
-	out   string
-	noGit bool
+	pkg     string
+	out     string
+	noGit   bool
+	yes     bool
+	options map[string]*string
+}
+
+func loadSpringTemplate() (fs.FS, *template.Manifest, error) {
+	src, err := fs.Sub(templates.FS, templates.SpringAPI)
+	if err != nil {
+		return nil, nil, err
+	}
+	m, err := template.Load(src)
+	return src, m, err
 }
 
 func newNewCmd() *cobra.Command {
-	var f newFlags
+	_, manifest, err := loadSpringTemplate()
+	if err != nil {
+		panic(err) // manifesto embutido inválido: erro de build do forge
+	}
+	f := newFlags{options: map[string]*string{}}
 	cmd := &cobra.Command{
-		Use:   "new <nome>",
+		Use:   "new [nome]",
 		Short: "Cria um novo projeto Spring Boot",
+		Long: `Cria um projeto a partir do template spring-api.
+
+Sem o nome ou sem alguma opção, e em um terminal, abre um formulário interativo.
+Com --yes (ou sem terminal) usa os padrões para o que não for informado.`,
 		Example: `  forge new "Payments API"
-  forge new payments-api --package com.empresa --out ~/projetos`,
-		Args: cobra.ExactArgs(1),
+  forge new payments-api --package com.empresa --http feign --auth cognito --cache redis
+  forge new payments-api --yes`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runNew(cmd, args[0], f)
+			return runNew(cmd, args, f)
 		},
 	}
-	cmd.Flags().StringVar(&f.pkg, "package", "com.example", "pacote base Java")
+	cmd.Flags().StringVar(&f.pkg, "package", defaultPackage, "pacote base Java")
 	cmd.Flags().StringVar(&f.out, "out", ".", "diretório pai; o projeto é criado em <out>/<nome-kebab>")
 	cmd.Flags().BoolVar(&f.noGit, "no-git", false, "não executar git init")
+	cmd.Flags().BoolVarP(&f.yes, "yes", "y", false, "não perguntar nada; usar os padrões")
+	for _, o := range manifest.Options {
+		f.options[o.Name] = cmd.Flags().String(o.Name, "",
+			fmt.Sprintf("%s (%s; padrão %s)", o.Description, strings.Join(o.Values, "|"), o.Default))
+	}
 	return cmd
 }
 
-func runNew(cmd *cobra.Command, raw string, f newFlags) error {
-	n, err := names.New(raw)
-	if err != nil {
-		return err
-	}
-	if err := names.ValidatePackage(f.pkg); err != nil {
-		return err
-	}
-	src, err := fs.Sub(templates.FS, templates.SpringAPI)
-	if err != nil {
-		return err
-	}
-	dest := filepath.Join(f.out, n.Kebab)
-	files, err := engine.Generate(src, engine.Options{Names: n, Package: f.pkg, Dest: dest})
+func runNew(cmd *cobra.Command, args []string, f newFlags) error {
+	_, manifest, err := loadSpringTemplate()
 	if err != nil {
 		return err
 	}
 
-	w := cmd.OutOrStdout()
-	fmt.Fprintf(w, "Projeto %q criado em %s (%d arquivos)\n", n.Title, dest, len(files))
-
-	if !f.noGit {
-		if err := gitInit(dest); err != nil {
-			fmt.Fprintf(cmd.ErrOrStderr(), "aviso: git init falhou: %v\n", err)
+	a := Answers{Package: f.pkg, PackageSet: cmd.Flags().Changed("package"), Options: map[string]string{}}
+	if len(args) == 1 {
+		a.Name = args[0]
+	}
+	for name, v := range f.options {
+		if *v != "" {
+			a.Options[name] = *v
 		}
 	}
 
-	fmt.Fprintf(w, "\nPróximos passos:\n  cd %s\n  ./mvnw verify   # requer JDK 25 e Docker (Testcontainers)\n", dest)
+	missing := a.Name == "" || !a.PackageSet || len(a.Options) < len(manifest.Options)
+	if missing && !f.yes && isTerminal() {
+		if err := newPrompter.Fill(manifest, &a); err != nil {
+			return err
+		}
+	}
+	if a.Name == "" {
+		return fmt.Errorf("informe o nome do projeto (argumento ou modo interativo)")
+	}
+	return createProject(cmd.OutOrStdout(), cmd.ErrOrStderr(), a, f.out, f.noGit)
+}
+
+// createProject é o caminho único de geração, usado pelo fluxo interativo e pelo de flags.
+func createProject(w, errW io.Writer, a Answers, out string, noGit bool) error {
+	n, err := names.New(a.Name)
+	if err != nil {
+		return err
+	}
+	if err := names.ValidatePackage(a.Package); err != nil {
+		return err
+	}
+	src, manifest, err := loadSpringTemplate()
+	if err != nil {
+		return err
+	}
+	sel, err := manifest.Resolve(a.Options)
+	if err != nil {
+		return err
+	}
+
+	dest := filepath.Join(out, n.Kebab)
+	files, err := engine.Generate(src, engine.Options{Names: n, Package: a.Package, Dest: dest, Selection: sel})
+	if err != nil {
+		return err
+	}
+	cfg := project.Config{
+		Forge:    project.ForgeInfo{Version: Version},
+		Template: manifest.Name,
+		Project:  project.ProjectInfo{Name: strings.TrimSpace(a.Name), Package: a.Package},
+		Options:  sel,
+	}
+	if err := project.Write(dest, cfg); err != nil {
+		return err
+	}
+
+	fmt.Fprintf(w, "Projeto %q criado em %s (%d arquivos)\n", n.Title, dest, len(files)+1)
+	for _, k := range sel.SortedKeys() {
+		fmt.Fprintf(w, "  %s = %s\n", k, sel[k])
+	}
+
+	if !noGit {
+		if err := gitInit(dest); err != nil {
+			fmt.Fprintf(errW, "aviso: git init falhou: %v\n", err)
+		}
+	}
+
+	fmt.Fprintf(w, "\nPróximos passos:\n  cd %s\n  ./mvnw verify   # requer JDK 25 e Docker (Testcontainers)\n  forge doctor     # confere o ambiente\n", dest)
 	return nil
 }
 
@@ -74,4 +173,9 @@ func gitInit(dir string) error {
 	c.Dir = dir
 	c.Stderr = os.Stderr
 	return c.Run()
+}
+
+// stdinIsTerminal usa a checagem real de TTY: no Windows o dispositivo NUL parece "char device".
+func stdinIsTerminal() bool {
+	return term.IsTerminal(os.Stdin.Fd())
 }

@@ -3,11 +3,18 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  # forge:if auth!=none
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: ${JWT_ISSUER_URI}
+  # forge:end
+  # forge:if cache=redis
+  #~ data:
+  #~   redis:
+  #~     host: ${REDIS_HOST}
+  # forge:end
 
 logging:
   structured:

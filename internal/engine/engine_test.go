@@ -12,14 +12,18 @@ import (
 
 	"github.com/ikauedeveloper/forge/internal/engine"
 	"github.com/ikauedeveloper/forge/internal/names"
+	"github.com/ikauedeveloper/forge/internal/template"
 	"github.com/ikauedeveloper/forge/templates"
 )
 
 var update = flag.Bool("update", false, "regenera testdata/golden")
 
-const goldenDir = "../../testdata/golden/payments-api"
-
 func generate(t *testing.T, raw, pkg, dest string) []string {
+	t.Helper()
+	return generateWith(t, raw, pkg, dest, nil)
+}
+
+func generateWith(t *testing.T, raw, pkg, dest string, sel template.Selection) []string {
 	t.Helper()
 	n, err := names.New(raw)
 	if err != nil {
@@ -29,7 +33,7 @@ func generate(t *testing.T, raw, pkg, dest string) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	files, err := engine.Generate(src, engine.Options{Names: n, Package: pkg, Dest: dest})
+	files, err := engine.Generate(src, engine.Options{Names: n, Package: pkg, Dest: dest, Selection: sel})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,32 +141,42 @@ func TestSkipsBuildOutput(t *testing.T) {
 }
 
 func TestGolden(t *testing.T) {
-	dest := filepath.Join(t.TempDir(), "payments-api")
-	generate(t, "Payments API", "com.empresa", dest)
-
-	if *update {
-		if err := os.RemoveAll(goldenDir); err != nil {
-			t.Fatal(err)
-		}
-		copyTree(t, dest, goldenDir)
-		return
+	cases := []struct {
+		name, raw string
+		sel       template.Selection
+	}{
+		{"payments-api", "Payments API", nil}, // padrões: both / jwt / none
+		{"orders-service", "Orders Service", template.Selection{"http": "webclient", "auth": "cognito", "cache": "redis"}},
 	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			golden := filepath.Join("../../testdata/golden", c.name)
+			dest := filepath.Join(t.TempDir(), c.name)
+			generateWith(t, c.raw, "com.empresa", dest, c.sel)
 
-	got, want := readTree(t, dest), readTree(t, goldenDir)
-	for p, w := range want {
-		g, ok := got[p]
-		if !ok {
-			t.Errorf("arquivo ausente no gerado: %s", p)
-			continue
-		}
-		if g != w {
-			t.Errorf("conteúdo diferente: %s", p)
-		}
-	}
-	for p := range got {
-		if _, ok := want[p]; !ok {
-			t.Errorf("arquivo extra no gerado: %s", p)
-		}
+			if *update {
+				clearDir(t, golden)
+				copyTree(t, dest, golden)
+				return
+			}
+
+			got, want := readTree(t, dest), readTree(t, golden)
+			for p, w := range want {
+				g, ok := got[p]
+				if !ok {
+					t.Errorf("arquivo ausente no gerado: %s", p)
+					continue
+				}
+				if g != w {
+					t.Errorf("conteúdo diferente: %s", p)
+				}
+			}
+			for p := range got {
+				if _, ok := want[p]; !ok {
+					t.Errorf("arquivo extra no gerado: %s", p)
+				}
+			}
+		})
 	}
 }
 
@@ -170,8 +184,19 @@ func readTree(t *testing.T, root string) map[string]string {
 	t.Helper()
 	out := map[string]string{}
 	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
 			return err
+		}
+		if d.IsDir() {
+			// A IDE (extensão Java) compila os poms do golden e cria estes diretórios.
+			if d.Name() == "target" || d.Name() == ".settings" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		switch d.Name() {
+		case ".project", ".classpath", ".factorypath":
+			return nil
 		}
 		b, err := os.ReadFile(p)
 		if err != nil {
@@ -195,6 +220,26 @@ func copyTree(t *testing.T, from, to string) {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// clearDir apaga o conteúdo de dir sem remover o diretório (a IDE pode mantê-lo aberto).
+func clearDir(t *testing.T, dir string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return
+		}
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if e.Name() == "target" || e.Name() == ".settings" {
+			continue
+		}
+		if err := os.RemoveAll(filepath.Join(dir, e.Name())); err != nil {
 			t.Fatal(err)
 		}
 	}

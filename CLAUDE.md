@@ -5,6 +5,8 @@ Plano completo em docs/PLAN.md. Execute UMA fase por vez.
 
 ## Estrutura
 - cmd/forge/            entrypoint
+- internal/template/    manifesto do template (opções, remoções)
+- internal/project/     .forge.yaml do projeto gerado
 - internal/cli/         comandos Cobra
 - internal/names/       normalização do nome do projeto (kebab, snake, pascal...)
 - internal/engine/      cópia, renomeação por sentinela, render de templates
@@ -26,6 +28,10 @@ Plano completo em docs/PLAN.md. Execute UMA fase por vez.
 - Templates de referência DEVEM compilar e passar nos testes sem passar pelo forge.
 - Arquivos de infra variáveis usam delimitadores [[ ]], nunca {{ }}.
 - Antes de compilar o forge, garanta que templates/*/target não existe (`./mvnw clean`): o go:embed incluiria os artefatos.
+- Variações do template usam diretivas em comentários (`forge:if/else/end`) e ramos alternativos comentados com `~`
+  (`//~`, `#~`, `<!--~ -->`), nunca `[[ ]]` em arquivos Java. O estado de referência do template é o de
+  `reference:` em `template.forge.yaml` e precisa compilar sozinho. Não ponha diretivas dentro do bloco de imports
+  (o engine poda imports sem uso) e use nomes totalmente qualificados em código que só existe fora da referência.
 - Nunca renderizar arquivos binários (jar, png, fontes). Preservar bit de execução (mvnw, scripts).
 - Todo nome gerado deve respeitar limites da AWS (ALB/target group 32, bucket 63, role IAM 64).
 - Nome de banco, schema e usuário sempre em snake_case minúsculo.

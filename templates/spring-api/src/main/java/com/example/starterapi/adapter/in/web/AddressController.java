@@ -8,7 +8,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+// forge:if auth!=none
 @IsAuthenticated
+// forge:end
 @RequestMapping("/api/addresses")
 public class AddressController {
 
