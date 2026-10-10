@@ -1,0 +1,21 @@
+# Uso: docker compose -f compose.yaml -f compose.full.yaml up --build
+services:
+  app:
+    build: .
+    image: starter-api:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-starter_api}
+      DB_USERNAME: ${POSTGRES_USER:-starter_api}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-starter_api}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness | grep -q UP"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s

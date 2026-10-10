@@ -1,5 +1,7 @@
+# O Spring Boot sobe o compose.yaml e injeta a conexão do banco (ServiceConnection),
+# então não há datasource configurado aqui.
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/payments_api
-    username: payments_api
-    password: payments_api
+  docker:
+    compose:
+      enabled: true
+      lifecycle-management: start-only

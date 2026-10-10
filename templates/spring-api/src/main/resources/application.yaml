@@ -5,6 +5,9 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  docker:
+    compose:
+      enabled: false
   lifecycle:
     timeout-per-shutdown-phase: 30s
   cloud:
