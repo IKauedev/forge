@@ -42,6 +42,8 @@ Plano completo em docs/PLAN.md. Execute UMA fase por vez.
 - Antes de fixar versões (Spring Boot, Spring Cloud, Terraform, actions, imagens Docker),
   consulte a documentação oficial atual. Não confie em versões de memória.
 - Compatibilidade Spring Boot x Spring Cloud: verificar a tabela oficial.
+- Workflows do template: toda action de terceiros fixada por SHA de 40 hex (com a versão em comentário),
+  `${{ }}` do GitHub fica intocado, nada de access keys (OIDC). Rode `actionlint` depois de mexer neles.
 - Não rodar `terraform apply` nem criar recursos AWS. Apenas validate/plan.
 - Commits pequenos, mensagens em Conventional Commits.
 - Se uma tarefa estiver ambígua, pergunte antes de implementar.

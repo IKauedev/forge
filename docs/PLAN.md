@@ -213,6 +213,12 @@ Gere .github/workflows/ no template Spring:
 Valide com actionlint. Documente em docs/ os secrets/variables que o usuário precisa configurar.
 ```
 
+**Notas de execução (2026-10-10)**
+- Três workflows: `ci.yml`, `deploy.yml` e o reutilizável `deploy-env.yml`. A task definition vem do ECS (`describe-task-definition`) e só a imagem é trocada, então não há JSON no repositório. Convenção de nomes `<app>-<ambiente>` que a Fase 5 deve seguir (ECR `<app>`, cluster/serviço/família `<app>-<env>`, container `<app>`).
+- Variáveis (não secrets): `AWS_REGION`, `AWS_ROLE_ARN` por Environment; opcionais `ECR_REPOSITORY`, `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_TASK_FAMILY`. Documentadas em `docs/PIPELINE.md` do projeto.
+- O Trivy local reprovou a imagem: Tomcat 11.0.24, Jackson 2.21.5 e Jackson 3.1.5 (HIGH/CRITICAL com correção). O pom sobrescreve `tomcat.version`, `jackson-2-bom.version` e `jackson-bom.version` até o Boot 4.1.x incorporar as correções.
+- Validado: `actionlint` limpo, Hadolint limpo (só aviso informativo DL3066) e Trivy limpo na imagem. Não foi feito deploy real nem usadas credenciais AWS.
+
 **Critérios de aceite**
 - `actionlint` sem erros no projeto gerado.
 - Nenhuma credencial estática nos workflows.

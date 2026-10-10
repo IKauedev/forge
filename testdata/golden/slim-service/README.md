@@ -16,6 +16,10 @@ JDK 25 e Docker. Windows, Linux e macOS (o `Makefile` usa `mvnw.cmd` no Windows)
 
 Este projeto foi gerado com `--db none`: sem banco, JPA nem Flyway; a consulta de CEP não é persistida.
 
+## CI/CD
+Workflows em `.github/workflows/` (CI em PR; deploy na `main` para ECS via OIDC). Variáveis, Environments e roles
+da AWS: [docs/PIPELINE.md](docs/PIPELINE.md).
+
 ## Imagem Docker
 Build multi-stage com cache do Maven, jar extraído em camadas (`jarmode=tools`), JRE Alpine,
 usuário não-root, `MaxRAMPercentage=75` e `ExitOnOutOfMemoryError`.

@@ -33,6 +33,10 @@ para `.env` para trocar nome, usuário, senha e portas. Adminer:
 <!--~ Este projeto foi gerado com `--db none`: sem banco, JPA nem Flyway; a consulta de CEP não é persistida. -->
 <!-- forge:end -->
 
+## CI/CD
+Workflows em `.github/workflows/` (CI em PR; deploy na `main` para ECS via OIDC). Variáveis, Environments e roles
+da AWS: [docs/PIPELINE.md](docs/PIPELINE.md).
+
 ## Imagem Docker
 Build multi-stage com cache do Maven, jar extraído em camadas (`jarmode=tools`), JRE Alpine,
 usuário não-root, `MaxRAMPercentage=75` e `ExitOnOutOfMemoryError`.

@@ -18,6 +18,11 @@
 
   <properties>
     <java.version>25</java.version>
+    <!-- Correções de segurança (HIGH/CRITICAL, apontadas pelo Trivy no CI) à frente do BOM do
+         Spring Boot 4.1.1. Remova cada linha quando o Boot passar a incluir a versão corrigida. -->
+    <tomcat.version>11.0.25</tomcat.version>
+    <jackson-bom.version>3.1.7</jackson-bom.version>
+    <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
     <mapstruct.version>1.6.3</mapstruct.version>
     <springdoc.version>3.1.1</springdoc.version>
     <wiremock.version>3.13.2</wiremock.version>

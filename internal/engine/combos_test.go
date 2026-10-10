@@ -84,6 +84,7 @@ func TestEveryCombinationIsCleanAndWellFormed(t *testing.T) {
 		t.Run(label(sel), func(t *testing.T) {
 			dest := filepath.Join(t.TempDir(), "orders-api")
 			files := generateWith(t, "Orders API", "com.empresa", dest, sel)
+			checkWorkflows(t, dest, "orders-api")
 
 			for _, rel := range files {
 				if rel == template.ManifestFile {

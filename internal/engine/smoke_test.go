@@ -57,6 +57,11 @@ func TestSmokeVerify(t *testing.T) {
 
 			run(t, dest, "docker", append(composeArgs(dest), "config", "-q")...)
 
+			if _, err := exec.LookPath("actionlint"); err == nil {
+				run(t, dest, "git", "init", "-q")
+				run(t, dest, "actionlint")
+			}
+
 			if sel["db"] != "none" {
 				up := append(composeArgs(dest), "up", "-d", "--wait", "--wait-timeout", "180", "db")
 				t.Cleanup(func() { run(t, dest, "docker", append(composeArgs(dest), "down", "-v")...) })

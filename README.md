@@ -39,6 +39,11 @@ Obrigatórios (saída com código 1 se faltar): **Java 25+** (respeita `JAVA_HOM
 Opcionais (só avisam): Terraform, AWS CLI, Node.js. Dentro de um projeto, confere o bit de execução do `mvnw`.
 Com o daemon do Docker parado o resultado é um aviso. Cores desligam com `NO_COLOR`.
 
+## Pipeline gerada
+Todo projeto traz `.github/workflows/` (`ci.yml`, `deploy.yml`, `deploy-env.yml`): CI em PR (verify, Hadolint,
+Trivy) e deploy na `main` para o ECS via OIDC, dev automático e prod com aprovação. Sem access keys; as actions
+ficam fixadas por SHA. Variáveis e Environments a configurar: `docs/PIPELINE.md` do projeto gerado.
+
 ## Testes
 
 ```sh
@@ -46,6 +51,7 @@ go build ./... && go vet ./... && go test ./...
 # smoke: gera 5 projetos (matriz representativa), valida o compose, sobe o banco e roda ./mvnw verify
 # (JAVA_HOME=JDK 25, Docker ativo)
 go test -tags smoke -timeout 60m ./internal/engine
+# opcional: valida os workflows (go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12)
 # regenerar os goldens depois de mudar o template
 go test ./internal/engine -run TestGolden -update
 ```

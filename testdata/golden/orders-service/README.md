@@ -23,6 +23,10 @@ O banco escolhido na geração está registrado em `.forge.yaml` (`options.db`).
 para `.env` para trocar nome, usuário, senha e portas. Adminer:
 `docker compose --profile tools up -d` (http://localhost:8081).
 
+## CI/CD
+Workflows em `.github/workflows/` (CI em PR; deploy na `main` para ECS via OIDC). Variáveis, Environments e roles
+da AWS: [docs/PIPELINE.md](docs/PIPELINE.md).
+
 ## Imagem Docker
 Build multi-stage com cache do Maven, jar extraído em camadas (`jarmode=tools`), JRE Alpine,
 usuário não-root, `MaxRAMPercentage=75` e `ExitOnOutOfMemoryError`.
