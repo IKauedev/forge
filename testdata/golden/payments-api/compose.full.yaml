@@ -4,13 +4,13 @@ services:
     build: .
     image: payments-api:local
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-payments_api}
-      DB_USERNAME: ${POSTGRES_USER:-payments_api}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-payments_api}
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-payments_api}
+      DB_USERNAME: ${DB_USER:-payments_api}
+      DB_PASSWORD: ${DB_PASSWORD:-payments_api}
       JWT_ISSUER_URI: ${JWT_ISSUER_URI:-https://issuer.example.invalid}
     ports:
       - "${APP_PORT:-8080}:8080"

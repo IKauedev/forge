@@ -9,17 +9,18 @@ JDK 25 e Docker. Windows, Linux e macOS (o `Makefile` usa `mvnw.cmd` no Windows)
 
 | Comando | O que faz |
 |---|---|
-| `make up` / `make down` | sobe / derruba o Postgres (compose.yaml) |
-| `make run` | sobe o banco e roda a app com o perfil `local` |
+| `make up` / `make down` | sobe / derruba a infraestrutura (banco e cache, `compose.yaml`) |
+| `make run` | sobe a infraestrutura e roda a app com o perfil `local` |
 | `make test` | `mvnw verify`: testes, Spotless, ArchUnit, JaCoCo |
 | `make image` | constrói a imagem Docker `orders-service:local` |
-| `make full` | banco + app em containers (`compose.full.yaml`) |
+| `make full` | infraestrutura + app em containers (`compose.full.yaml`) |
 
-No perfil `local`, o Spring Boot lê o `compose.yaml` e injeta a conexão do banco sozinho
+No perfil `local`, o Spring Boot lê o `compose.yaml` e injeta a conexão dos serviços sozinho
 (`spring-boot-docker-compose`), então não há datasource para configurar. Fora do perfil `local`
 a integração fica desligada e o jar de produção nem a inclui.
 
-Copie `.env.example` para `.env` para trocar usuário, senha e portas. Adminer:
+O banco escolhido na geração está registrado em `.forge.yaml` (`options.db`). Copie `.env.example`
+para `.env` para trocar nome, usuário, senha e portas. Adminer:
 `docker compose --profile tools up -d` (http://localhost:8081).
 
 ## Imagem Docker

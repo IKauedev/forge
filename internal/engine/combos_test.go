@@ -23,7 +23,7 @@ func manifest(t *testing.T) *template.Manifest {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m, err := template.Load(src)
+	m, err := engine.LoadManifest(src)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,8 +77,8 @@ func TestManifestReferenceIsAnOption(t *testing.T) {
 func TestEveryCombinationIsCleanAndWellFormed(t *testing.T) {
 	m := manifest(t)
 	combos := allSelections(m)
-	if len(combos) != 27 {
-		t.Fatalf("esperava 27 combinações, há %d", len(combos))
+	if len(combos) != 108 { // 4 bancos x 3 http x 3 auth x 3 cache
+		t.Fatalf("esperava 108 combinações, há %d", len(combos))
 	}
 	for _, sel := range combos {
 		t.Run(label(sel), func(t *testing.T) {

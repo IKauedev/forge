@@ -106,7 +106,7 @@ func TestNewCreatesProject(t *testing.T) {
 func TestNewWritesForgeYaml(t *testing.T) {
 	out := t.TempDir()
 	if _, err := run(t, "new", "Payments API", "--package", "com.empresa", "--out", out, "--no-git",
-		"--http", "feign", "--auth", "cognito", "--cache", "redis"); err != nil {
+		"--db", "mysql", "--http", "feign", "--auth", "cognito", "--cache", "redis"); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := project.Read(filepath.Join(out, "payments-api"))
@@ -117,7 +117,7 @@ func TestNewWritesForgeYaml(t *testing.T) {
 		cfg.Forge.Version != Version {
 		t.Errorf("config inesperada: %+v", cfg)
 	}
-	want := map[string]string{"http": "feign", "auth": "cognito", "cache": "redis"}
+	want := map[string]string{"db": "mysql", "http": "feign", "auth": "cognito", "cache": "redis"}
 	for k, v := range want {
 		if cfg.Options[k] != v {
 			t.Errorf("option %s = %q, want %q", k, cfg.Options[k], v)
@@ -130,13 +130,13 @@ func TestInteractiveAndFlagsProduceIdenticalOutput(t *testing.T) {
 
 	withPrompt(t, &fakePrompter{}, false)
 	if _, err := run(t, "new", "Payments API", "--package", "com.empresa", "--out", flagsOut, "--no-git",
-		"--http", "webclient", "--auth", "cognito", "--cache", "redis"); err != nil {
+		"--db", "mariadb", "--http", "webclient", "--auth", "cognito", "--cache", "redis"); err != nil {
 		t.Fatal(err)
 	}
 
 	fp := &fakePrompter{
 		name: "Payments API", pkg: "com.empresa",
-		options: map[string]string{"http": "webclient", "auth": "cognito", "cache": "redis"},
+		options: map[string]string{"db": "mariadb", "http": "webclient", "auth": "cognito", "cache": "redis"},
 	}
 	withPrompt(t, fp, true)
 	if _, err := run(t, "new", "--out", promptOut, "--no-git"); err != nil {
@@ -158,11 +158,11 @@ func TestInteractiveAndFlagsProduceIdenticalOutput(t *testing.T) {
 }
 
 func TestPromptOnlyAsksForWhatIsMissing(t *testing.T) {
-	fp := &fakePrompter{pkg: "com.empresa", options: map[string]string{"http": "both", "auth": "jwt", "cache": "none"}}
+	fp := &fakePrompter{pkg: "com.empresa", options: map[string]string{"db": "postgres", "http": "both", "auth": "jwt", "cache": "none"}}
 	withPrompt(t, fp, true)
 	out := t.TempDir()
 	if _, err := run(t, "new", "complete", "--package", "com.empresa", "--out", out, "--no-git",
-		"--http", "both", "--auth", "jwt", "--cache", "none"); err != nil {
+		"--db", "postgres", "--http", "both", "--auth", "jwt", "--cache", "none"); err != nil {
 		t.Fatal(err)
 	}
 	if fp.called {
@@ -184,7 +184,7 @@ func TestYesNeverPromptsAndUsesDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Options["http"] != "both" || cfg.Options["auth"] != "jwt" || cfg.Options["cache"] != "none" ||
+	if cfg.Options["db"] != "postgres" || cfg.Options["http"] != "both" || cfg.Options["auth"] != "jwt" || cfg.Options["cache"] != "none" ||
 		cfg.Project.Package != "com.example" {
 		t.Errorf("padrões inesperados: %+v", cfg)
 	}
@@ -207,6 +207,7 @@ func TestNewRejectsInvalidInput(t *testing.T) {
 		{"new", "ok-name", "--http", "grpc", "--out", out, "--no-git"},
 		{"new", "ok-name", "--auth", "saml", "--out", out, "--no-git"},
 		{"new", "ok-name", "--cache", "memcached", "--out", out, "--no-git"},
+		{"new", "ok-name", "--db", "oracle", "--out", out, "--no-git"},
 	} {
 		if _, err := run(t, args...); err == nil {
 			t.Errorf("esperava erro para %v", args)
@@ -230,7 +231,7 @@ func TestListShowsTemplateAndOptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"spring-api", "--http", "feign | webclient | both", "--auth", "cognito", "--cache", "redis", "--yes"} {
+	for _, want := range []string{"spring-api", "--db", "postgres | mysql | mariadb | none", "--http", "feign | webclient | both", "--auth", "cognito", "--cache", "redis", "--yes"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("list deveria mostrar %q:\n%s", want, out)
 		}

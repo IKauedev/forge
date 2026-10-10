@@ -20,6 +20,10 @@ type Option struct {
 	Values      []string `yaml:"values"`
 	Default     string   `yaml:"default"`
 	Description string   `yaml:"description"`
+
+	// ExtendWithCatalog indica que os valores vêm do catálogo de bancos (somados aos de Values,
+	// como "none"). O engine preenche isso via ExtendOption.
+	ExtendWithCatalog bool `yaml:"extend_with_catalog"`
 }
 
 // Removal lista caminhos (relativos ao template) removidos quando a condição é verdadeira.
@@ -54,13 +58,28 @@ func Load(src fs.FS) (*Manifest, error) {
 	if err := yaml.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf("%s inválido: %w", ManifestFile, err)
 	}
-	return &m, m.validate()
+	return &m, m.Validate()
 }
 
-func (m *Manifest) validate() error {
+// ExtendOption põe values (ex.: nomes do catálogo) à frente dos valores já declarados na opção.
+func (m *Manifest) ExtendOption(name string, values []string) error {
+	for i, o := range m.Options {
+		if o.Name == name {
+			m.Options[i].Values = append(append([]string{}, values...), o.Values...)
+			return m.Validate()
+		}
+	}
+	return fmt.Errorf("opção %q não existe", name)
+}
+
+// Validate confere nomes, valores e padrões das opções.
+func (m *Manifest) Validate() error {
 	for _, o := range m.Options {
-		if o.Name == "" || len(o.Values) == 0 {
+		if o.Name == "" || (len(o.Values) == 0 && !o.ExtendWithCatalog) {
 			return fmt.Errorf("opção %q sem nome ou valores", o.Name)
+		}
+		if o.ExtendWithCatalog && len(o.Values) <= 1 {
+			continue // ainda não estendida
 		}
 		if !contains(o.Values, o.Default) {
 			return fmt.Errorf("opção %q: padrão %q não está em %v", o.Name, o.Default, o.Values)
@@ -136,8 +155,22 @@ func IsRemoved(p string, removed []string) bool {
 	return false
 }
 
-// Eval avalia condições como "auth!=none", "http=feign,both" ou várias ligadas por "&&".
+// Eval avalia condições como "auth!=none", "http=feign,both", termos ligados por "&&" e grupos
+// ligados por "||" ("&&" tem precedência: "a=1 && b=2 || c=3").
 func Eval(cond string, sel Selection) (bool, error) {
+	for _, group := range strings.Split(cond, "||") {
+		ok, err := evalAll(group, sel)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func evalAll(cond string, sel Selection) (bool, error) {
 	for _, part := range strings.Split(cond, "&&") {
 		part = strings.TrimSpace(part)
 		if part == "" {

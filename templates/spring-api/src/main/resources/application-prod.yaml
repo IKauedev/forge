@@ -1,8 +1,10 @@
 spring:
+  # forge:if db!=none
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  # forge:end
   # forge:if auth!=none
   security:
     oauth2:

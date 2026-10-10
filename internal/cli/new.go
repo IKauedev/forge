@@ -56,7 +56,7 @@ func loadSpringTemplate() (fs.FS, *template.Manifest, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	m, err := template.Load(src)
+	m, err := engine.LoadManifest(src)
 	return src, m, err
 }
 

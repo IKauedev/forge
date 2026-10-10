@@ -1,4 +1,4 @@
-# O Spring Boot sobe o compose.yaml e injeta a conexão do banco (ServiceConnection),
+# O Spring Boot sobe o compose.yaml e injeta a conexão dos serviços (ServiceConnection),
 # então não há datasource configurado aqui.
 spring:
   docker:

@@ -14,14 +14,32 @@ import (
 
 // smokeMatrix cobre cada valor de cada opção ao menos uma vez, sem o produto cartesiano.
 var smokeMatrix = []template.Selection{
-	{"http": "both", "auth": "jwt", "cache": "none"},   // padrões
-	{"http": "feign", "auth": "none", "cache": "none"}, // enxuto
-	{"http": "webclient", "auth": "cognito", "cache": "caffeine"},
-	{"http": "feign", "auth": "jwt", "cache": "redis"},
+	{"db": "postgres", "http": "both", "auth": "jwt", "cache": "none"}, // padrões
+	{"db": "mysql", "http": "feign", "auth": "none", "cache": "none"},
+	{"db": "mariadb", "http": "webclient", "auth": "cognito", "cache": "caffeine"},
+	{"db": "none", "http": "feign", "auth": "jwt", "cache": "redis"},
+	{"db": "none", "http": "webclient", "auth": "none", "cache": "none"}, // sem compose.yaml
 }
 
-// TestSmokeVerify gera cada projeto da matriz e roda ./mvnw verify nele.
-// Requer JDK 25 (JAVA_HOME) e Docker. Execute: go test -tags smoke -timeout 40m ./internal/engine
+func run(t *testing.T, dir string, name string, args ...string) {
+	t.Helper()
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("%s %v falhou: %v\n%s", name, args, err, out)
+	}
+}
+
+func composeArgs(dest string) []string {
+	if _, err := os.Stat(filepath.Join(dest, "compose.yaml")); err == nil {
+		return []string{"compose", "-f", "compose.yaml", "-f", "compose.full.yaml"}
+	}
+	return []string{"compose", "-f", "compose.full.yaml"}
+}
+
+// TestSmokeVerify gera cada projeto da matriz, valida o compose, sobe o banco com healthcheck e
+// roda ./mvnw verify. Requer JDK 25 (JAVA_HOME) e Docker.
+// Execute: go test -tags smoke -timeout 60m ./internal/engine
 func TestSmokeVerify(t *testing.T) {
 	if os.Getenv("JAVA_HOME") == "" {
 		t.Skip("JAVA_HOME não definido (precisa de JDK 25)")
@@ -37,15 +55,20 @@ func TestSmokeVerify(t *testing.T) {
 			dest := filepath.Join(tmp, "payments-api")
 			generateWith(t, "Payments API", "com.empresa", dest, sel)
 
+			run(t, dest, "docker", append(composeArgs(dest), "config", "-q")...)
+
+			if sel["db"] != "none" {
+				up := append(composeArgs(dest), "up", "-d", "--wait", "--wait-timeout", "180", "db")
+				t.Cleanup(func() { run(t, dest, "docker", append(composeArgs(dest), "down", "-v")...) })
+				run(t, dest, "docker", up...)
+				run(t, dest, "docker", append(composeArgs(dest), "down", "-v")...)
+			}
+
 			mvnw := "./mvnw"
 			if runtime.GOOS == "windows" {
 				mvnw = filepath.Join(dest, "mvnw.cmd")
 			}
-			cmd := exec.Command(mvnw, "-q", "verify")
-			cmd.Dir = dest
-			if out, err := cmd.CombinedOutput(); err != nil {
-				t.Fatalf("mvnw verify falhou: %v\n%s", err, out)
-			}
+			run(t, dest, mvnw, "-q", "verify")
 		})
 	}
 }

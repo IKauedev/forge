@@ -9,25 +9,40 @@ JDK 25 e Docker. Windows, Linux e macOS (o `Makefile` usa `mvnw.cmd` no Windows)
 
 | Comando | O que faz |
 |---|---|
-| `make up` / `make down` | sobe / derruba o Postgres (compose.yaml) |
-| `make run` | sobe o banco e roda a app com o perfil `local` |
+<!-- forge:if db!=none||cache=redis -->
+| `make up` / `make down` | sobe / derruba a infraestrutura (banco e cache, `compose.yaml`) |
+| `make run` | sobe a infraestrutura e roda a app com o perfil `local` |
+<!-- forge:else -->
+<!--~ | `make run` | roda a app com o perfil `local` | -->
+<!-- forge:end -->
 | `make test` | `mvnw verify`: testes, Spotless, ArchUnit, JaCoCo |
 | `make image` | constrói a imagem Docker `starter-api:local` |
-| `make full` | banco + app em containers (`compose.full.yaml`) |
+| `make full` | infraestrutura + app em containers (`compose.full.yaml`) |
 
-No perfil `local`, o Spring Boot lê o `compose.yaml` e injeta a conexão do banco sozinho
+<!-- forge:if db!=none||cache=redis -->
+No perfil `local`, o Spring Boot lê o `compose.yaml` e injeta a conexão dos serviços sozinho
 (`spring-boot-docker-compose`), então não há datasource para configurar. Fora do perfil `local`
 a integração fica desligada e o jar de produção nem a inclui.
 
-Copie `.env.example` para `.env` para trocar usuário, senha e portas. Adminer:
+<!-- forge:end -->
+<!-- forge:if db!=none -->
+O banco escolhido na geração está registrado em `.forge.yaml` (`options.db`). Copie `.env.example`
+para `.env` para trocar nome, usuário, senha e portas. Adminer:
 `docker compose --profile tools up -d` (http://localhost:8081).
+<!-- forge:else -->
+<!--~ Este projeto foi gerado com `--db none`: sem banco, JPA nem Flyway; a consulta de CEP não é persistida. -->
+<!-- forge:end -->
 
 ## Imagem Docker
 Build multi-stage com cache do Maven, jar extraído em camadas (`jarmode=tools`), JRE Alpine,
 usuário não-root, `MaxRAMPercentage=75` e `ExitOnOutOfMemoryError`.
 
 ## API
+<!-- forge:if db!=none -->
 `GET /api/addresses/{cep}` consulta o CEP (ViaCEP) e guarda o resultado no banco.
+<!-- forge:else -->
+<!--~ `GET /api/addresses/{cep}` consulta o CEP (ViaCEP). -->
+<!-- forge:end -->
 O cliente HTTP é escolhido por `clients.viacep.impl` (`feign` | `webclient`).
 Readiness: `/actuator/health/readiness`. Swagger só com o perfil `dev`.
 

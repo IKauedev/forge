@@ -2,23 +2,27 @@
 name: starter-api
 
 services:
-  postgres:
+  # forge:if db!=none
+  # forge:slot db-compose-service
+  db:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-starter_api}
-      POSTGRES_USER: ${POSTGRES_USER:-starter_api}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-starter_api}
+      POSTGRES_DB: ${DB_NAME:-starter_api}
+      POSTGRES_USER: ${DB_USER:-starter_api}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-starter_api}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 5s
+  # forge:end
 
+  # forge:end
   # forge:if cache=redis
   #~ redis:
   #~   image: redis:8-alpine
@@ -31,14 +35,16 @@ services:
   #~     retries: 10
   #~
   # forge:end
+  # forge:if db!=none
   adminer:
     image: adminer:5
     profiles: ["tools"]
     ports:
       - "8081:8080"
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
 
 volumes:
-  postgres-data:
+  db-data:
+  # forge:end

@@ -11,7 +11,6 @@ import org.springframework.resilience.annotation.EnableResilientMethods;
 @Configuration
 @EnableResilientMethods
 public class DomainConfig {
-
   @Bean
   AddressLookupService addressLookupService(
       AddressLookupPort lookupPort, AddressRepositoryPort repositoryPort) {

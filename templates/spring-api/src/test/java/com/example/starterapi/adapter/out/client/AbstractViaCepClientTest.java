@@ -34,14 +34,16 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+// forge:if db!=none||cache=redis
 @Import(TestcontainersConfig.class)
+// forge:end
 abstract class AbstractViaCepClientTest {
 
   static WireMockServer wireMock;
 
   @Autowired MockMvc mvc;
 
-  // forge:if cache!=none
+  // forge:if cache!=none && db!=none
   @Autowired SpringDataAddressRepository repository;
 
   // forge:end
@@ -117,6 +119,7 @@ abstract class AbstractViaCepClientTest {
     wireMock.verify(3, getRequestedFor(urlEqualTo("/30130010/json")));
   }
 
+  // forge:if db!=none
   @Test
   void secondRequestIsServedFromDatabase() throws Exception {
     wireMock.stubFor(
@@ -136,6 +139,8 @@ abstract class AbstractViaCepClientTest {
     wireMock.verify(1, getRequestedFor(urlEqualTo("/20040020/json")));
   }
 
+  // forge:end
+
   // forge:if cache!=none
   @Test
   void secondRequestIsServedFromCache() throws Exception {
@@ -153,7 +158,9 @@ abstract class AbstractViaCepClientTest {
     mvc.perform(authed(get("/api/addresses/01310100"))).andExpect(status().isOk());
 
     // sem banco e sem ViaCEP, só o cache consegue responder
+    // forge:if db!=none
     repository.deleteAll();
+    // forge:end
     wireMock.resetAll();
 
     mvc.perform(authed(get("/api/addresses/01310100")))

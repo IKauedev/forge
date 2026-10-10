@@ -2,16 +2,16 @@
 name: payments-api
 
 services:
-  postgres:
+  db:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-payments_api}
-      POSTGRES_USER: ${POSTGRES_USER:-payments_api}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payments_api}
+      POSTGRES_DB: ${DB_NAME:-payments_api}
+      POSTGRES_USER: ${DB_USER:-payments_api}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-payments_api}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -25,8 +25,8 @@ services:
     ports:
       - "8081:8080"
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
 
 volumes:
-  postgres-data:
+  db-data:

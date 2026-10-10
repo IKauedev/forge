@@ -97,6 +97,7 @@
     <!--~   <artifactId>spring-boot-starter-data-redis</artifactId> -->
     <!--~ </dependency> -->
     <!-- forge:end -->
+    <!-- forge:if db!=none -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -105,6 +106,7 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-flyway</artifactId>
     </dependency>
+    <!-- forge:slot db-deps -->
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-database-postgresql</artifactId>
@@ -114,12 +116,16 @@
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <!-- forge:end -->
+    <!-- forge:end -->
+    <!-- forge:if db!=none||cache=redis -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-docker-compose</artifactId>
       <scope>runtime</scope>
       <optional>true</optional>
     </dependency>
+    <!-- forge:end -->
     <dependency>
       <groupId>org.mapstruct</groupId>
       <artifactId>mapstruct</artifactId>
@@ -143,16 +149,19 @@
       <scope>test</scope>
     </dependency>
     <!-- forge:end -->
+    <!-- forge:if db!=none -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- forge:end -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- forge:if db!=none||cache=redis -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-testcontainers</artifactId>
@@ -163,11 +172,16 @@
       <artifactId>testcontainers-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- forge:end -->
+    <!-- forge:if db!=none -->
+    <!-- forge:slot db-test-deps -->
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers-postgresql</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- forge:end -->
+    <!-- forge:end -->
     <dependency>
       <groupId>org.wiremock</groupId>
       <artifactId>wiremock-standalone</artifactId>
@@ -203,6 +217,7 @@
         <executions>
           <execution>
             <id>repackage</id>
+            <!-- forge:if db!=none||cache=redis -->
             <configuration>
               <excludes>
                 <exclude>
@@ -211,6 +226,7 @@
                 </exclude>
               </excludes>
             </configuration>
+            <!-- forge:end -->
           </execution>
         </executions>
       </plugin>

@@ -20,6 +20,7 @@ cd payments-api && ./mvnw verify               # JDK 25 + Docker
 |---|---|---|---|
 | `--package` | pacote Java | `com.example` | pacote base e `groupId` |
 | `--out` | diretório | `.` | pai; o projeto vai para `<out>/<nome-kebab>` |
+| `--db` | `postgres`, `mysql`, `mariadb`, `none` | `postgres` | banco do catálogo (imagem, driver, Flyway, Testcontainers e migration do dialeto); `none` remove JPA, Flyway e o serviço do compose |
 | `--http` | `feign`, `webclient`, `both` | `both` | cliente HTTP do exemplo ViaCEP (com `both`, escolhe por `clients.viacep.impl`) |
 | `--auth` | `none`, `jwt`, `cognito` | `jwt` | `none` remove o Spring Security; `cognito` lê roles de `cognito:groups` |
 | `--cache` | `none`, `caffeine`, `redis` | `none` | `@Cacheable` na consulta; `redis` inclui serviço no compose e Testcontainers |
@@ -30,6 +31,7 @@ Sem terminal (CI, pipes) o forge nunca abre o formulário: usa os padrões e exi
 O nome aceita `Payments API`, `payments-api`, `PaymentsAPI` ou `payments_api` (máx. 24 caracteres em kebab,
 para caber nos limites de nomes da AWS).
 
+Os bancos vêm de `catalog/databases.yaml` (`forge list` mostra os disponíveis).
 Cada projeto gerado traz um `.forge.yaml` com as respostas (versão do forge, template, nome, pacote e opções).
 
 ### `forge doctor`
@@ -41,8 +43,9 @@ Com o daemon do Docker parado o resultado é um aviso. Cores desligam com `NO_CO
 
 ```sh
 go build ./... && go vet ./... && go test ./...
-# smoke: gera 4 projetos (matriz representativa) e roda ./mvnw verify em cada (JAVA_HOME=JDK 25, Docker ativo)
-go test -tags smoke -timeout 40m ./internal/engine
+# smoke: gera 5 projetos (matriz representativa), valida o compose, sobe o banco e roda ./mvnw verify
+# (JAVA_HOME=JDK 25, Docker ativo)
+go test -tags smoke -timeout 60m ./internal/engine
 # regenerar os goldens depois de mudar o template
 go test ./internal/engine -run TestGolden -update
 ```
@@ -50,15 +53,16 @@ go test ./internal/engine -run TestGolden -update
 ## Como funciona
 
 `templates/spring-api/` é um projeto real que compila sozinho no estado de referência
-(`http=both`, `auth=jwt`, `cache=caffeine`, ver `template.forge.yaml`). O engine copia o template embutido
+(`db=postgres`, `http=both`, `auth=jwt`, `cache=caffeine`, ver `template.forge.yaml`). O engine copia o template embutido
 (`go:embed`) e:
 
 1. remove arquivos conforme o manifesto (`remove:`);
 2. aplica diretivas em comentários (`forge:if`, `forge:else`, `forge:end`) e destampa ramos alternativos
-   escritos como `//~`, `#~` ou `<!--~ -->`;
+   escritos como `//~`, `#~` ou `<!--~ -->`; blocos `forge:slot` são trocados por trechos gerados do
+   catálogo de bancos (`catalog/databases.yaml`);
 3. renomeia conteúdo, arquivos e diretórios pelas sentinelas (`starter-api`, `StarterApi`, `starterapi`,
    `starter_api`, `STARTER_API`, `Starter Api`, `com.example`).
 
 O bit de execução do `mvnw` e de `*.sh` é restaurado por nome, pois o `embed.FS` não guarda permissões.
-Para adicionar uma opção: declare em `options:` do manifesto, use as diretivas nos arquivos e rode os testes
+Para adicionar um banco: [docs/ADDING_A_DATABASE.md](docs/ADDING_A_DATABASE.md). Para adicionar uma opção: declare em `options:` do manifesto, use as diretivas nos arquivos e rode os testes
 (o de 27 combinações garante que nada sobra e que YAML/XML continuam válidos).

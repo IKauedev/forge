@@ -1,0 +1,6 @@
+spring:
+
+logging:
+  structured:
+    format:
+      console: ecs

@@ -17,4 +17,11 @@ public class DomainConfig {
       AddressLookupPort lookupPort, AddressRepositoryPort repositoryPort) {
     return new AddressLookupService(lookupPort, repositoryPort);
   }
+
+  // forge:if db=none
+  // ~ @Bean
+  // ~ AddressRepositoryPort addressRepository() {
+  // ~   return new NoOpAddressRepository();
+  // ~ }
+  // forge:end
 }

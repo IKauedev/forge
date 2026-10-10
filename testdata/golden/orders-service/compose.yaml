@@ -2,18 +2,19 @@
 name: orders-service
 
 services:
-  postgres:
-    image: postgres:17-alpine
+  db:
+    image: mysql:8.4
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-orders_service}
-      POSTGRES_USER: ${POSTGRES_USER:-orders_service}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orders_service}
+      MYSQL_DATABASE: ${DB_NAME:-orders_service}
+      MYSQL_USER: ${DB_USER:-orders_service}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-orders_service}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${DB_PORT:-3306}:3306"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - db-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -35,8 +36,8 @@ services:
     ports:
       - "8081:8080"
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
 
 volumes:
-  postgres-data:
+  db-data:

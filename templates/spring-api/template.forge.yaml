@@ -6,6 +6,11 @@ name: spring-api
 description: API Spring Boot hexagonal com Java 25, Flyway, Testcontainers e ArchUnit
 
 options:
+  - name: db
+    description: Banco de dados (valores do catálogo; none = sem persistência)
+    values: [none]
+    extend_with_catalog: true
+    default: postgres
   - name: http
     description: Cliente HTTP do módulo de exemplo (ViaCEP)
     values: [feign, webclient, both]
@@ -21,11 +26,24 @@ options:
 
 # Estado em que o template de referência compila e é testado sem passar pelo forge.
 reference:
+  db: postgres
   http: both
   auth: jwt
   cache: caffeine
 
 remove:
+  - when: db=none
+    paths:
+      - src/main/java/com/example/starterapi/adapter/out/persistence/
+      - src/test/java/com/example/starterapi/adapter/out/persistence/
+      - src/main/resources/db/
+  - when: db=none && cache!=redis
+    paths:
+      - compose.yaml
+      - src/test/java/com/example/starterapi/TestcontainersConfig.java
+  - when: db!=none
+    paths:
+      - src/main/java/com/example/starterapi/config/NoOpAddressRepository.java
   - when: http=feign
     paths:
       - src/main/java/com/example/starterapi/adapter/out/client/ViaCepWebClientAdapter.java

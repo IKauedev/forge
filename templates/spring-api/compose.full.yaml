@@ -3,18 +3,26 @@ services:
   app:
     build: .
     image: starter-api:local
+    # forge:if db!=none||cache=redis
     depends_on:
-      postgres:
+      # forge:if db!=none
+      db:
         condition: service_healthy
+      # forge:end
       # forge:if cache=redis
       #~ redis:
       #~   condition: service_healthy
       # forge:end
+    # forge:end
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-starter_api}
-      DB_USERNAME: ${POSTGRES_USER:-starter_api}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-starter_api}
+      # forge:if db!=none
+      # forge:slot db-full-url
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-starter_api}
+      # forge:end
+      DB_USERNAME: ${DB_USER:-starter_api}
+      DB_PASSWORD: ${DB_PASSWORD:-starter_api}
+      # forge:end
       # forge:if auth!=none
       JWT_ISSUER_URI: ${JWT_ISSUER_URI:-https://issuer.example.invalid}
       # forge:end

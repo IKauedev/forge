@@ -4,15 +4,15 @@ services:
     build: .
     image: orders-service:local
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-orders_service}
-      DB_USERNAME: ${POSTGRES_USER:-orders_service}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-orders_service}
+      DB_URL: jdbc:mysql://db:3306/${DB_NAME:-orders_service}
+      DB_USERNAME: ${DB_USER:-orders_service}
+      DB_PASSWORD: ${DB_PASSWORD:-orders_service}
       JWT_ISSUER_URI: ${JWT_ISSUER_URI:-https://issuer.example.invalid}
       REDIS_HOST: redis
     ports:

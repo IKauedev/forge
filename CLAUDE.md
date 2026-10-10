@@ -14,7 +14,7 @@ Plano completo em docs/PLAN.md. Execute UMA fase por vez.
 - internal/doctor/      checagem de pré-requisitos
 - templates/spring-api/ projeto de referência Spring (COMPILA sozinho)
 - templates/angular-app/ projeto de referência Angular (COMPILA sozinho)
-- catalog/              dados: bancos, features
+- catalog/              dados: bancos (databases.yaml) e migrations por dialeto
 - testdata/golden/      saídas esperadas
 
 ## Comandos
@@ -32,6 +32,9 @@ Plano completo em docs/PLAN.md. Execute UMA fase por vez.
   (`//~`, `#~`, `<!--~ -->`), nunca `[[ ]]` em arquivos Java. O estado de referência do template é o de
   `reference:` em `template.forge.yaml` e precisa compilar sozinho. Não ponha diretivas dentro do bloco de imports
   (o engine poda imports sem uso) e use nomes totalmente qualificados em código que só existe fora da referência.
+- Trechos que dependem do banco ficam em blocos `forge:slot <nome>` com o texto do Postgres (referência); o
+  engine os troca por trechos gerados de `internal/catalog/slots.go`. Mudou um lado, mude o outro: o teste
+  `TestPostgresSlotsMatchTemplateReference` acusa divergência. Bancos novos: docs/ADDING_A_DATABASE.md.
 - Nunca renderizar arquivos binários (jar, png, fontes). Preservar bit de execução (mvnw, scripts).
 - Todo nome gerado deve respeitar limites da AWS (ALB/target group 32, bucket 63, role IAM 64).
 - Nome de banco, schema e usuário sempre em snake_case minúsculo.

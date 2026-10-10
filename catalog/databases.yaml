@@ -1,0 +1,83 @@
+# Catálogo de bancos do forge. Para adicionar um banco: um bloco aqui + a pasta
+# migrations/<nome>/ com a V1 (veja docs/ADDING_A_DATABASE.md).
+#
+# Convenções:
+#   - env.extra: linhas "CHAVE: valor" extras no environment do container.
+#   - healthcheck: comando do healthcheck do compose; use $$ para escapar o $ do compose.
+#   - aws: usado pela infra Terraform (Fase 5).
+databases:
+  - name: postgres
+    description: PostgreSQL 17
+    image: postgres:17-alpine
+    port: 5432
+    jdbc_scheme: postgresql
+    driver:
+      group: org.postgresql
+      artifact: postgresql
+    flyway_module: flyway-database-postgresql
+    testcontainers:
+      artifact: testcontainers-postgresql
+      class: org.testcontainers.postgresql.PostgreSQLContainer
+    env:
+      database: POSTGRES_DB
+      user: POSTGRES_USER
+      password: POSTGRES_PASSWORD
+    data_dir: /var/lib/postgresql/data
+    healthcheck: pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+    aws:
+      engine: postgres
+      version: "17"
+      family: postgres17
+      port: 5432
+
+  - name: mysql
+    description: MySQL 8.4 LTS
+    image: mysql:8.4
+    port: 3306
+    jdbc_scheme: mysql
+    driver:
+      group: com.mysql
+      artifact: mysql-connector-j
+    flyway_module: flyway-mysql
+    testcontainers:
+      artifact: testcontainers-mysql
+      class: org.testcontainers.mysql.MySQLContainer
+    env:
+      database: MYSQL_DATABASE
+      user: MYSQL_USER
+      password: MYSQL_PASSWORD
+      extra:
+        - 'MYSQL_RANDOM_ROOT_PASSWORD: "yes"'
+    data_dir: /var/lib/mysql
+    healthcheck: mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD}
+    aws:
+      engine: mysql
+      version: "8.4"
+      family: mysql8.4
+      port: 3306
+
+  - name: mariadb
+    description: MariaDB 11.8 LTS
+    image: mariadb:11.8
+    port: 3306
+    jdbc_scheme: mariadb
+    driver:
+      group: org.mariadb.jdbc
+      artifact: mariadb-java-client
+    flyway_module: flyway-mysql
+    testcontainers:
+      artifact: testcontainers-mariadb
+      class: org.testcontainers.mariadb.MariaDBContainer
+    env:
+      database: MARIADB_DATABASE
+      user: MARIADB_USER
+      password: MARIADB_PASSWORD
+      extra:
+        - 'MARIADB_RANDOM_ROOT_PASSWORD: "yes"'
+    data_dir: /var/lib/mysql
+    healthcheck: healthcheck.sh --connect --innodb_initialized
+    aws:
+      engine: mariadb
+      version: "11.8"
+      family: mariadb11.8
+      port: 3306

@@ -146,7 +146,8 @@ func TestGolden(t *testing.T) {
 		sel       template.Selection
 	}{
 		{"payments-api", "Payments API", nil}, // padrões: both / jwt / none
-		{"orders-service", "Orders Service", template.Selection{"http": "webclient", "auth": "cognito", "cache": "redis"}},
+		{"orders-service", "Orders Service", template.Selection{"db": "mysql", "http": "webclient", "auth": "cognito", "cache": "redis"}},
+		{"slim-service", "Slim Service", template.Selection{"db": "none", "http": "feign", "auth": "none", "cache": "none"}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

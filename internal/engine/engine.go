@@ -85,7 +85,7 @@ func Generate(src fs.FS, opts Options) ([]string, error) {
 	if err := ensureEmptyDest(opts.Dest); err != nil {
 		return nil, err
 	}
-	manifest, err := template.Load(src)
+	manifest, err := LoadManifest(src)
 	if err != nil {
 		return nil, err
 	}
@@ -98,27 +98,15 @@ func Generate(src fs.FS, opts Options) ([]string, error) {
 		return nil, err
 	}
 	rep := Replacer(opts.Names, opts.Package)
+	slots, overrides, err := databaseAssets(sel)
+	if err != nil {
+		return nil, err
+	}
 
 	var generated []string
-	err = fs.WalkDir(src, ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			if skippedDirs[d.Name()] || template.IsRemoved(p+"/", removed) {
-				return fs.SkipDir
-			}
-			return nil
-		}
-		if p == template.ManifestFile || template.IsRemoved(p, removed) {
-			return nil
-		}
-		content, err := fs.ReadFile(src, p)
-		if err != nil {
-			return err
-		}
+	emit := func(p string, content []byte) error {
 		if !IsBinary(p, content) {
-			processed, err := ProcessDirectives(p, string(content), sel)
+			processed, err := ProcessDirectivesWithSlots(p, string(content), sel, slots)
 			if err != nil {
 				return err
 			}
@@ -141,9 +129,41 @@ func Generate(src fs.FS, opts Options) ([]string, error) {
 		}
 		generated = append(generated, rel)
 		return nil
+	}
+
+	seen := map[string]bool{}
+	err = fs.WalkDir(src, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if skippedDirs[d.Name()] || template.IsRemoved(p+"/", removed) {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if p == template.ManifestFile || template.IsRemoved(p, removed) {
+			return nil
+		}
+		content, err := fs.ReadFile(src, p)
+		if err != nil {
+			return err
+		}
+		if ov, ok := overrides[p]; ok {
+			content, seen[p] = ov, true
+		}
+		return emit(p, content)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("gerando projeto: %w", err)
+	}
+	// arquivos do catálogo que o template de referência não tem (ex.: migrations extras)
+	for p, content := range overrides {
+		if !seen[p] && !template.IsRemoved(p, removed) {
+			if err := emit(p, content); err != nil {
+				return nil, fmt.Errorf("gerando projeto: %w", err)
+			}
+		}
 	}
 	return generated, nil
 }

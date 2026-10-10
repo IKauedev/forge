@@ -21,7 +21,7 @@ import (
 // Não coloque diretivas dentro do bloco de imports de arquivos .java: depois de processar, o
 // engine poda sozinho os imports que ficaram sem uso.
 var (
-	directiveRe = regexp.MustCompile(`^\s*(?://|#|<!--)\s*forge:(if|else|end)\b(.*?)\s*(?:-->)?\s*$`)
+	directiveRe = regexp.MustCompile(`^\s*(?://|#|<!--)\s*forge:(if|else|end|slot)\b(.*?)\s*(?:-->)?\s*$`)
 	lineMarkRe  = regexp.MustCompile(`^(\s*)(?://\s*|#)~ ?(.*)$`)
 	xmlMarkRe   = regexp.MustCompile(`^(\s*)<!--~ ?(.*?)\s*-->\s*$`)
 	importRe    = regexp.MustCompile(`^import\s+(static\s+)?([\w.]+)\.(\w+|\*);\s*$`)
@@ -31,18 +31,29 @@ type frame struct {
 	parentActive bool
 	cond         bool
 	inElse       bool
+	slot         bool // bloco forge:slot: o conteúdo interno é a referência
+	replaced     bool // o slot foi trocado pelo trecho gerado
 	line         int
 }
 
 func (f frame) active() bool {
+	if f.slot {
+		return f.parentActive && !f.replaced
+	}
 	if f.inElse {
 		return f.parentActive && !f.cond
 	}
 	return f.parentActive && f.cond
 }
 
-// ProcessDirectives aplica as diretivas forge: de um arquivo de texto.
+// ProcessDirectives aplica as diretivas forge: de um arquivo de texto (sem slots gerados).
 func ProcessDirectives(name, content string, sel template.Selection) (string, error) {
+	return ProcessDirectivesWithSlots(name, content, sel, nil)
+}
+
+// ProcessDirectivesWithSlots também troca os blocos "forge:slot <nome>" pelos trechos em slots.
+// Um slot sem trecho correspondente mantém o conteúdo de referência.
+func ProcessDirectivesWithSlots(name, content string, sel template.Selection, slots map[string]string) (string, error) {
 	lines := strings.SplitAfter(content, "\n")
 	var out strings.Builder
 	var stack []frame
@@ -61,8 +72,22 @@ func ProcessDirectives(name, content string, sel template.Selection) (string, er
 					return "", fmt.Errorf("%s:%d: %w", name, i+1, err)
 				}
 				stack = append(stack, frame{parentActive: active, cond: cond, line: i + 1})
+			case "slot":
+				slotName := strings.TrimSpace(m[2])
+				if slotName == "" {
+					return "", fmt.Errorf("%s:%d: forge:slot sem nome", name, i+1)
+				}
+				snippet, found := slots[slotName]
+				replaced := found && active
+				if replaced {
+					out.WriteString(snippet)
+					if !strings.HasSuffix(snippet, "\n") {
+						out.WriteString("\n")
+					}
+				}
+				stack = append(stack, frame{parentActive: active, slot: true, replaced: replaced, line: i + 1})
 			case "else":
-				if len(stack) == 0 || stack[len(stack)-1].inElse {
+				if len(stack) == 0 || stack[len(stack)-1].inElse || stack[len(stack)-1].slot {
 					return "", fmt.Errorf("%s:%d: forge:else sem forge:if", name, i+1)
 				}
 				stack[len(stack)-1].inElse = true
@@ -83,7 +108,7 @@ func ProcessDirectives(name, content string, sel template.Selection) (string, er
 		}
 	}
 	if len(stack) > 0 {
-		return "", fmt.Errorf("%s:%d: forge:if sem forge:end", name, stack[len(stack)-1].line)
+		return "", fmt.Errorf("%s:%d: forge:if/forge:slot sem forge:end", name, stack[len(stack)-1].line)
 	}
 	if changed && strings.HasSuffix(name, ".java") {
 		return pruneUnusedImports(tidyJava(out.String())), nil

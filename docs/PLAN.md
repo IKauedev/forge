@@ -180,6 +180,12 @@ Smoke test em matriz (postgres, mysql, mariadb, none): gerar, ./mvnw verify com 
 do banco correspondente, e docker compose config.
 ```
 
+**Notas de execução (2026-10-10)**
+- Imagens: `postgres:17-alpine`, `mysql:8.4` (LTS), `mariadb:11.8` (LTS; `11.4` não existe como tag). Drivers e Flyway vêm do BOM do Boot 4.1.1.
+- O catálogo gera trechos (`forge:slot`) para pom, compose e `TestcontainersConfig`; o template de referência continua em Postgres. Serviço do compose renomeado para `db` e variáveis do `.env` neutras (`DB_*`).
+- `--db none` remove JPA, Flyway, persistência, serviço do compose (e o `compose.yaml` inteiro quando não há Redis) e liga um repositório sem persistência.
+- Mapeamento AWS (`aws:` no catálogo) fica para a Fase 5; confirmar lá a versão do RDS para MariaDB 11.8.
+
 **Critérios de aceite**
 - Os 4 valores de `--db` geram projetos que passam em `./mvnw verify`.
 - Adicionar um banco novo exige só um bloco no YAML e uma migration (documentar em `docs/ADDING_A_DATABASE.md`).
@@ -258,7 +264,7 @@ Fase 6 do docs/PLAN.md. Modo plano primeiro.
 ```
 
 **Notas de execução (2026-10-10)**
-- Feita antes das Fases 3, 4 e 5. Como `--db` ainda não existe, o `.forge.yaml` não tem `db` (entra na Fase 3).
+- Feita antes das Fases 3, 4 e 5.
 - Variação por diretivas em comentários + manifesto `template.forge.yaml` (ver README). `--auth cognito` = jwt com roles de `cognito:groups`; `--cache redis` inclui Redis no compose e nos testes.
 - Padrões de `forge new`: `http=both`, `auth=jwt`, `cache=none`. Sem terminal, nunca pergunta (usa os padrões).
 - Mínimos do doctor: Java 25, Terraform 1.10, Node 22; Terraform e Node a reconfirmar nas Fases 5 e 7.

@@ -1,10 +1,12 @@
 spring:
   application:
     name: starter-api
+  # forge:if db!=none
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  # forge:end
   docker:
     compose:
       enabled: false
