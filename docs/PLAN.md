@@ -429,6 +429,13 @@ Pipeline e Terraform reaproveitam os módulos das Fases 4 e 5. Integra com `forg
 - **Cobertura mínima de 60%** (como o Spring): extensão `quarkus-jacoco` coleta dos `@QuarkusTest` e o `jacoco-maven-plugin` aplica o `check` sobre `jacoco-quarkus.exec`; o relatório fica em `target/jacoco-report` (artefato do CI do projeto).
 - Achado: testes unitários puros não entram no `jacoco-quarkus.exec`, e o `AddressResourceTest` mocka o caso de uso, então o domínio aparecia com 0%. O novo `AddressFlowTest` percorre a cadeia real (REST → caso de uso → domínio → ViaCEP falso → banco → mapeamento de erros) e levou a cobertura de 83% para 95% (referência). Sem ele a variante `none/none` ficava em 63%, perto do limite.
 
+## 5.4 Publicação da v1.0.0
+
+- Release **v1.0.0** publicada em https://github.com/IKauedev/forge/releases/tag/v1.0.0 (repositório **privado**, licença **MIT**): binários linux/macOS/Windows (amd64/arm64) e `checksums.txt`, gerados pelo GoReleaser v2.18.3 no workflow `release.yml` a partir da tag, com o CI da `main` verde.
+- Validado de ponta a ponta: o `forge` instalado na máquina (build `dev`) rodou `forge update`, baixou a release, conferiu o SHA-256 e se trocou para 1.0.0.
+- O Homebrew tap é opcional: sem o secret `HOMEBREW_TAP_TOKEN` o release sai só com os binários (o cask é gerado, mas não enviado). Para ativar: crie `ikauedev/homebrew-tap`, um token com escrita nele e o secret no repositório.
+- Com o repositório privado, `go install github.com/ikauedev/forge/cmd/forge@latest` e `forge update` precisam de credencial (`GITHUB_TOKEN`/`GH_TOKEN` ou `gh auth login`; para o Go, `GOPRIVATE=github.com/ikauedev/*`). Tornar o repositório público remove essa exigência.
+
 ## 6. Backlog pós-v1.0
 
 - MongoDB como segundo "perfil de persistência" (sem Flyway, Spring Data MongoDB, DocumentDB com aviso de compatibilidade parcial).
@@ -458,8 +465,8 @@ Pipeline e Terraform reaproveitam os módulos das Fases 4 e 5. Integra com `forg
 
 - [ ] `forge new "Meu Projeto" --db postgres --deploy ecs` gera projeto que compila e passa em `verify`
 - [ ] Todas as combinações da matriz verdes no CI
-- [ ] `actionlint`, `terraform validate` e `tflint` verdes nos projetos gerados
-- [ ] Nenhuma credencial estática em lugar nenhum
+- [x] `actionlint`, `terraform validate` e `tflint` verdes nos projetos gerados (CI)
+- [x] Nenhuma credencial estática em lugar nenhum
 - [ ] README com GIF, instalação por `brew` e `go install`
-- [ ] Renovate/Dependabot ativo
+- [x] Renovate/Dependabot ativo
 - [ ] Um repositório de exemplo gerado pela ferramenta com pipeline verde
