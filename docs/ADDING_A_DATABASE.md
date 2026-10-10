@@ -45,6 +45,10 @@ enxergar o banco sozinhos.
 
    Ele sobe o container com o healthcheck do compose (`up --wait`) e executa `./mvnw verify` com Testcontainers.
 
+   O `quarkus-api` usa o `jdbc_scheme` como `db-kind` e como sufixo da extensão (`quarkus-jdbc-<scheme>`), então
+   o novo banco precisa ter essa extensão no Quarkus (confira em quarkus.io/extensions). Acrescente-o também à
+   `quarkusSmokeMatrix` e rode `-run TestSmokeQuarkus`. O Dev Services precisa suportar a imagem escolhida.
+
 ## O que o catálogo gera
 
 O template de referência escreve o trecho do Postgres dentro de blocos `forge:slot`. Para os outros bancos o
@@ -57,6 +61,8 @@ engine troca o bloco por um trecho gerado de `internal/catalog/slots.go`:
 | `db-compose-service` | `compose.yaml` | serviço `db` (imagem, env, porta, volume, healthcheck) |
 | `db-full-url` | `compose.full.yaml` | `DB_URL` visto de dentro da rede do compose |
 | `db-test-container` | `TestcontainersConfig.java` | bean do container com `@ServiceConnection` |
+| `qk-db-deps` | `pom.xml` (quarkus-api) | extensão `quarkus-jdbc-<jdbc_scheme>` e módulo do Flyway |
+| `qk-db-config` | `application.properties` (quarkus-api) | `db-kind` (= `jdbc_scheme`) e imagem do Dev Services |
 
 Além disso, as migrations de `catalog/migrations/<name>/` substituem a de referência em
 `src/main/resources/db/migration/`.

@@ -248,6 +248,12 @@ Valide: terraform fmt, init -backend=false e validate em cada diretório; tflint
 disponíveis. NÃO execute apply.
 ```
 
+**Notas da execução**
+- Nova opção `--vpc new|existing` (padrão `new`); `modules/network` só existe com `new` e `modules/database` só com `--db != none`. Slots `db-aws` vêm de `aws:` no catálogo.
+- Backend S3 com `use_lockfile = true` (lock nativo), sem DynamoDB. Lockfiles `.terraform.lock.hcl` versionados; `.terraform/` ignorado (o `go:embed` o incluiria).
+- Validado com Terraform 1.15.8: `fmt`, `init -backend=false` e `validate` em bootstrap, dev e prod. `tflint` e `checkov` não estão instalados nesta máquina, então não rodaram (configs em `infra/.tflint.hcl` e `infra/.checkov.yaml`). Nenhum `apply`.
+- Doc do projeto gerado: `docs/INFRA.md`.
+
 **Critérios de aceite**
 - `terraform validate` verde em `bootstrap`, `dev` e `prod`, nas variações de `--db`.
 - Nenhuma senha em variável ou arquivo de texto.
@@ -306,6 +312,17 @@ Crie templates/angular-app/ (sentinela starter-app) com a versão estável atual
 Valide: lint, test, build, terraform validate, actionlint. Integre ao `forge new --type angular-app`.
 ```
 
+**Notas da execução**
+- Angular 22.2.2 (versão estável do `npm view @angular/cli`; exige Node `^22.22.3 || ^24.15.0 || >=26`). O runner de testes do CLI é o Vitest. TypeScript 6, ESLint 10 com `angular-eslint`, Husky 9 + lint-staged, Prettier.
+- Configuração em runtime: `provideAppInitializer` carrega `config.json` (`apiBaseUrl`, `auth`). O deploy gera o arquivo do ambiente a partir das variáveis do Environment; a imagem Docker gera a partir de `API_BASE_URL`/`AUTH_*`.
+- Infra: `bootstrap` (state com lock nativo, OIDC, roles por Environment), `modules/static-site` (S3 privado + CloudFront com OAC, 403/404 → `/index.html` com 200, headers de segurança, ACM em us-east-1 via alias, Route 53 opcional) e `envs/dev|prod`. A role de deploy invalida `distribution/*` da conta porque o ID só existe após o apply (documentado em `docs/INFRA.md`).
+- Workflows: `ci.yml`, `deploy.yml`, `deploy-env.yml`; actions fixadas por SHA (`setup-node` v7.1.0 e `download-artifact` v8.0.2 conferidos pela API do GitHub). `actionlint` limpo (via Docker).
+- Integração: `forge new --type spring-api|angular-app`. O manifesto ganhou `sentinel`, `java_package` e `next_steps`; as flags de opção são a união dos templates e usar uma que não pertence ao `--type` é erro.
+- `go:embed` do `angular-app` com caminhos explícitos para não incluir `node_modules/`; `TestAngularTemplateIsEmbedded` acusa arquivo novo fora da lista.
+- Validado no projeto gerado (`forge new "Store Front" --type angular-app`): `npm ci`, lint, format, 11 testes e `ng build`; `terraform fmt`, `init -backend=false` e `validate` em bootstrap, dev e prod. A imagem Docker foi construída e testada (config em runtime e fallback de SPA em rota profunda → 200).
+- Não executado: `tflint`/`checkov` (não instalados) e `terraform apply` (proibido).
+- Pendências conhecidas: `golangci-lint` reporta 6 `errcheck` em `fmt.Fprint*` (`doctor`, `list`) que já existiam antes desta fase; não há `.golangci.yml`. O template Angular não traz fluxo de login (só `AuthService.setToken`); depende do provedor de identidade escolhido.
+
 **Critérios de aceite**
 - `ng build` e `terraform validate` verdes no projeto gerado.
 - Refresh em rota profunda funciona (fallback de SPA presente no módulo).
@@ -328,6 +345,13 @@ Fase 8 do docs/PLAN.md. Modo plano primeiro.
   mostra o diff contra o projeto atual, sem sobrescrever nada.
 ```
 
+**Notas da execução**
+- `forge upgrade --diff` (pacote `internal/upgrade`): regenera com as respostas do `.forge.yaml` num diretório temporário e compara. Diff unificado próprio (LCS, contexto de 3 linhas), sem dependência Go nova. Ignora `node_modules`, `target`, `dist`, `.angular` e `.terraform`. Testado com fixture de duas versões de template e pelo CLI.
+- `.github/workflows/ci.yml` (Go em Linux e Windows, golangci-lint v2.14.0, templates, projetos gerados e matriz smoke do Spring), `release.yml` e `.github/dependabot.yml`. Actions fixadas por SHA conferido na API do GitHub; `actionlint` limpo. O `golangci-lint` passou a retornar 0 problemas (corrigidos os `errcheck`).
+- `.goreleaser.yaml` (v2): linux/darwin/windows × amd64/arm64, checksums SHA-256 e `homebrew_casks` (`brews` está obsoleto). Validado com `goreleaser check` v2.18.3 num repo temporário com remote fictício; os 6 alvos compilam.
+- Fora do que dá para fazer aqui: o repositório não tem `remote`, então a `v1.0.0` **não foi publicada**; o tap `ikauedev/homebrew-tap`, o secret `HOMEBREW_TAP_TOKEN` e um arquivo LICENSE (a licença é decisão sua; não declarei nenhuma) ainda precisam existir.
+- O GIF do README (VHS/asciinema) não foi gerado e o exemplo de repositório com pipeline verde depende do repositório publicado.
+
 **Critérios de aceite**
 - Release `v1.0.0` publicada com binários.
 - `forge upgrade --diff` mostra diferenças reais entre duas versões do template (teste com fixture).
@@ -340,6 +364,15 @@ Vite + React + TypeScript (conferir versões atuais em `npm view` e na documenta
 `config.json` em runtime, interceptor de auth/correlation id, guards por role espelhando as anotações do backend.
 Reaproveita `infra/` (S3 + CloudFront com OAC) e workflows da Fase 7. Integra com `forge new --type react-app`.
 
+**Notas da execução**
+- Versões conferidas com `npm view`: Vite 8.3, React 19.3, React Router 8.4, Vitest 5, ESLint 10, TypeScript `~6.0.2`. O TypeScript 7.0 já existe, mas o `typescript-eslint` só aceita `<6.1`, então ficou no 6.0 (mesmo do scaffold oficial do Vite). O scaffold atual do Vite usa oxlint; mantive ESLint, como o plano pedia.
+- Sem biblioteca de HTTP ou de estado: `apiFetch` usa `fetch` e faz o que o interceptor do Angular faz (id de correlação, Bearer, 401 → limpa token e vai ao login, `ApiError`). Config em runtime: `loadConfig()` roda antes de `createRoot`.
+- Guards espelham o backend: `RequireAuth` (`@IsAuthenticated`), `RequireRole` (`@HasRole`), `RequireAnyRole` (`@HasAnyRole`) e `RequireAdmin` (`@IsAdmin`). As roles vêm do claim `auth.rolesClaim` do JWT (`roles`; `cognito:groups` no Cognito), normalizadas como no backend (sem `ROLE_`, maiúsculas). O token é lido sem validar a assinatura: só decide o que mostrar; a autorização é do backend.
+- `infra/`, workflows, Docker e docs reaproveitam os do `angular-app` (S3 privado + CloudFront com OAC, fallback de SPA, OIDC). Diferenças: build em `dist/`, favicon SVG, `npm test` (Vitest) e a variável `AUTH_ROLES_CLAIM`.
+- Achado que também vale para o Angular: o `.forge.yaml` gravado pelo forge reprovava o `prettier --check` do projeto gerado; os dois templates passaram a ignorá-lo no `.prettierignore` (teste `TestFrontendsIgnoreForgeYamlInPrettier`).
+- Validado no projeto gerado (`forge new "Store Front" --type react-app`): `npm ci`, lint, `format:check`, 22 testes e `vite build`; `terraform fmt` e `validate` em bootstrap, dev e prod; `actionlint` limpo; imagem Docker construída (config em runtime com `AUTH_ROLES_CLAIM` e fallback de SPA → 200).
+- CI do forge e Dependabot passaram a cobrir o `react-app`. `tflint`/`checkov` continuam sem rodar (não instalados).
+
 **Critérios de aceite:** `npm run lint && npm test && npm run build` e `terraform validate` verdes no projeto gerado.
 
 ---
@@ -350,6 +383,18 @@ Quarkus na linha LTS atual (3.33 na pesquisa de 2026-10-10; confirmar em quarkus
 `quarkus-rest` + REST Client, Hibernate ORM com Panache + Flyway, Dev Services nos testes, SmallRye Fault Tolerance
 (circuit breaker nativo), segurança JWT com `@RolesAllowed`/anotações próprias, Dockerfile, compose, ArchUnit.
 Pipeline e Terraform reaproveitam os módulos das Fases 4 e 5. Integra com `forge new --type quarkus-api`.
+
+**Notas da execução**
+- **Versão**: a LTS atual é a **3.40** (3.40.1, 2026-09-30, suporte até 2027-09-30; Java 17/21/25, recomendado 25), conferida em quarkus.io/releases e na API do code.quarkus.io. A 3.33 citada acima já não é a LTS.
+- **Escopo escolhido**: `--db` (catálogo: postgres, mysql, mariadb, none), `--vpc new|existing` e `--auth none|jwt`. Sem `--http` (só REST Client) e sem `--cache`; sem `cognito` (use `JWT_ROLES_CLAIM=cognito:groups`).
+- **Catálogo**: nenhum campo novo. O `db-kind` do Quarkus é o `jdbc_scheme` e a extensão é `quarkus-jdbc-<scheme>`; entraram só os slots `qk-db-deps` e `qk-db-config`. Compose, migrations e o slot AWS são os mesmos do Spring.
+- **Arquitetura**: domínio idêntico ao do Spring (Java puro); `DomainConfig` registra o serviço de domínio com um produtor CDI (`@Typed`, para não competir com `AddressApplicationService`); adapters JAX-RS, REST Client (`ViaCepRestClient`) + `ViaCepAdapter` com `@Retry` e `@CircuitBreaker`, Panache, erros em `application/problem+json`.
+- **Achado de segurança**: anotações próprias que agregam `@RolesAllowed` (meta-anotação ou `@Stereotype`) são **ignoradas** pelo Quarkus e deixam o endpoint aberto (anônimo recebeu 200). Por isso o template usa `@Authenticated`/`@RolesAllowed` direto, liga `deny-unannotated-endpoints` e tem testes de 401/403 (`SecurityEndpointsTest`). O PLAN previa "anotações próprias".
+- **JWT**: produção verifica pelo JWKS do emissor (`JWT_ISSUER_URI/.well-known/jwks.json` ou `JWT_JWKS_URI`); dev/test usam HS256 por JWK simétrica (`smallrye.jwt.verify.algorithm=HS256`) com o `POST /dev/token`, que o `@IfBuildProfile` remove do build de produção. Nenhuma chave privada no repositório (teste).
+- **Infra e pipeline**: reaproveitam os do Spring (ECS Fargate, RDS, OIDC), sem cache/Redis, `QUARKUS_PROFILE=prod` e health em `/q/health/ready`.
+- **Validação**: `./mvnw verify` verde no template (32 testes) e nas variantes geradas mysql+jwt (32), mariadb+none (21), none+jwt (29) e none+none (18), todas com Dev Services; compose completo subiu em produção (JSON nos logs, readiness com banco, `/dev/token` e OpenAPI ausentes, cabeçalho de correlação até no 401); `terraform fmt/validate`, `actionlint` e Hadolint (só o aviso informativo DL3066, igual ao Spring) limpos.
+- **Bug achado e corrigido nos dois Java**: o Javadoc de `LookupAddressUseCase` citava nomes totalmente qualificados que o google-java-format reflui conforme o tamanho do nome do projeto, e o `spotless:check` falhava em projetos gerados com nomes longos. Agora usa nomes simples (goldens do Spring atualizados).
+- **Pendência**: o scan do Trivy na imagem Quarkus depende de baixar o banco de vulnerabilidades; ver o resultado na seção de resumo.
 
 **Critérios de aceite:** `./mvnw verify` verde no template e no projeto gerado; `forge new --type` aceita os 4 tipos.
 

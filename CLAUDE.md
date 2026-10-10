@@ -13,7 +13,9 @@ Plano completo em docs/PLAN.md. Execute UMA fase por vez.
 - internal/catalog/     leitura do catalog/databases.yaml
 - internal/doctor/      checagem de pré-requisitos
 - templates/spring-api/ projeto de referência Spring (COMPILA sozinho)
+- templates/quarkus-api/ projeto de referência Quarkus 3.40 LTS (COMPILA sozinho)
 - templates/angular-app/ projeto de referência Angular (COMPILA sozinho)
+- templates/react-app/  projeto de referência React + Vite (COMPILA sozinho)
 - catalog/              dados: bancos (databases.yaml) e migrations por dialeto
 - testdata/golden/      saídas esperadas
 
@@ -21,13 +23,16 @@ Plano completo em docs/PLAN.md. Execute UMA fase por vez.
 - go build ./... && go vet ./... && go test ./...
 - golangci-lint run
 - Template Spring: cd templates/spring-api && ./mvnw -q verify
+- Template Quarkus: cd templates/quarkus-api && ./mvnw -q verify (JDK 25 + Docker; apague target/ depois)
 - Template Angular: cd templates/angular-app && npm ci && npm run lint && npm test -- --watch=false && npm run build
+- Template React: cd templates/react-app && npm ci && npm run lint && npm test && npm run build
 - Terraform: terraform fmt -check -recursive && terraform init -backend=false && terraform validate
 
 ## Regras
 - Templates de referência DEVEM compilar e passar nos testes sem passar pelo forge.
 - Arquivos de infra variáveis usam delimitadores [[ ]], nunca {{ }}.
 - Antes de compilar o forge, garanta que templates/*/target não existe (`./mvnw clean`): o go:embed incluiria os artefatos.
+  angular-app e react-app listam caminhos explícitos em `templates/templates.go` (não embutem node_modules/dist); arquivo novo na raiz deles precisa entrar na lista.
 - Variações do template usam diretivas em comentários (`forge:if/else/end`) e ramos alternativos comentados com `~`
   (`//~`, `#~`, `<!--~ -->`), nunca `[[ ]]` em arquivos Java. O estado de referência do template é o de
   `reference:` em `template.forge.yaml` e precisa compilar sozinho. Não ponha diretivas dentro do bloco de imports
