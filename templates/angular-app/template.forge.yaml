@@ -1,0 +1,16 @@
+# Manifesto do template. Lido pelo forge; nunca é copiado para o projeto gerado.
+name: angular-app
+description: App Angular (standalone, rotas lazy, signals) com config em runtime, S3 + CloudFront (OAC) e pipeline OIDC
+
+# Nome kebab de referência. As outras formas (StarterApp, starter_app, STARTER_APP, Starter App,
+# starterapp) são derivadas dele e trocadas pelas do projeto gerado.
+sentinel: starter-app
+
+options: []
+
+reference: {}
+
+next_steps:
+  - npm ci
+  - npm start # http://localhost:4200
+  - npm test -- --watch=false

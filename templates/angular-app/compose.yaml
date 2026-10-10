@@ -1,0 +1,10 @@
+# Site estático em Nginx, já com o build de produção: docker compose up --build
+# A API (spring-api) roda à parte; aponte API_BASE_URL para ela.
+services:
+  web:
+    build: .
+    ports:
+      - '4200:8080'
+    environment:
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8080/api}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}

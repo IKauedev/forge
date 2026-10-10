@@ -1,0 +1,26 @@
+# Configuração do checkov (docker run -v "$PWD:/tf" bridgecrew/checkov --config-file /tf/.checkov.yaml).
+# Os controles abaixo são recomendações opcionais que custam dinheiro ou dependem de decisões da sua
+# organização; foram deixados de fora de propósito. Revise cada um antes de ir para produção.
+framework:
+  - terraform
+directory:
+  - .
+quiet: true
+compact: true
+download-external-modules: false
+skip-check:
+  # CloudFront: WAF, logs de acesso, geo-restrição e failover de origem são decisões de custo/governança.
+  - CKV_AWS_68
+  - CKV_AWS_86
+  - CKV_AWS_374
+  - CKV_AWS_310
+  - CKV2_AWS_47
+  # CloudFront sem domínio próprio usa o certificado padrão (TLS mínimo fixo pela AWS). Com domain_name o módulo exige TLSv1.2_2021.
+  - CKV_AWS_174
+  # Bucket do site: criptografia SSE-S3 já ativa; KMS próprio, logs de acesso, replicação e notificações são opcionais.
+  - CKV_AWS_145
+  - CKV_AWS_18
+  - CKV_AWS_144
+  - CKV2_AWS_62
+  # Bucket de state: mesmos motivos acima.
+  - CKV_AWS_300

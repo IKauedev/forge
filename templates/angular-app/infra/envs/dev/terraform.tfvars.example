@@ -1,0 +1,5 @@
+aws_region = "us-east-1"
+
+# Opcional: domínio próprio (certificado ACM e registros DNS são criados no Route 53)
+# domain_name    = "dev.example.com"
+# hosted_zone_id = "Z0123456789ABCDEFGHIJ"
