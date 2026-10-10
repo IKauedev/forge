@@ -1,0 +1,21 @@
+aws_region = "us-east-1"
+
+# Imagem já enviada ao ECR pelo job de build (tag = SHA do commit)
+container_image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/starter-api:COMMIT_SHA"
+
+# Opcional: habilita HTTPS no ALB
+# certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/..."
+# forge:if auth!=none
+
+jwt_issuer_uri = "https://issuer.example.com"
+# forge:end
+# forge:if cache=redis
+#~
+#~ redis_host = "meu-redis.exemplo.cache.amazonaws.com"
+# forge:end
+# forge:if vpc=existing
+#~
+#~ vpc_id             = "vpc-0123456789abcdef0"
+#~ public_subnet_ids  = ["subnet-aaaa", "subnet-bbbb"]
+#~ private_subnet_ids = ["subnet-cccc", "subnet-dddd"]
+# forge:end

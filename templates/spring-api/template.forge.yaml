@@ -5,12 +5,23 @@
 name: spring-api
 description: API Spring Boot hexagonal com Java 25, Flyway, Testcontainers e ArchUnit
 
+sentinel: starter-api
+java_package: true
+
+next_steps:
+  - ./mvnw verify    # requer JDK 25 e Docker (Testcontainers)
+  - forge doctor     # confere o ambiente
+
 options:
   - name: db
     description: Banco de dados (valores do catálogo; none = sem persistência)
     values: [none]
     extend_with_catalog: true
     default: postgres
+  - name: vpc
+    description: Rede da infra Terraform (new = cria a VPC; existing = usa uma VPC que você já tem)
+    values: [new, existing]
+    default: new
   - name: http
     description: Cliente HTTP do módulo de exemplo (ViaCEP)
     values: [feign, webclient, both]
@@ -27,6 +38,7 @@ options:
 # Estado em que o template de referência compila e é testado sem passar pelo forge.
 reference:
   db: postgres
+  vpc: new
   http: both
   auth: jwt
   cache: caffeine
@@ -44,6 +56,12 @@ remove:
   - when: db!=none
     paths:
       - src/main/java/com/example/starterapi/config/NoOpAddressRepository.java
+  - when: db=none
+    paths:
+      - infra/modules/database/
+  - when: vpc=existing
+    paths:
+      - infra/modules/network/
   - when: http=feign
     paths:
       - src/main/java/com/example/starterapi/adapter/out/client/ViaCepWebClientAdapter.java
