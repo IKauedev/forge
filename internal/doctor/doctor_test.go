@@ -218,3 +218,34 @@ func TestRealPATHWithoutDocker(t *testing.T) {
 		t.Error("ambiente sem Docker deveria ter falhas")
 	}
 }
+
+func TestForTemplateChecksOnlyWhatTheTemplateNeeds(t *testing.T) {
+	env := healthy(t)
+	for _, tpl := range []string{"spring-api", "quarkus-api"} {
+		rs := ForTemplate(env, tpl)
+		if len(rs) != 2 || rs[0].Name != "Java" || rs[1].Name != "Docker" {
+			t.Errorf("%s: %+v", tpl, rs)
+		}
+	}
+	for _, tpl := range []string{"angular-app", "react-app"} {
+		rs := ForTemplate(env, tpl)
+		if len(rs) != 1 || rs[0].Name != "Node.js" || rs[0].Status != OK {
+			t.Errorf("%s: %+v", tpl, rs)
+		}
+	}
+	if rs := ForTemplate(env, "outro"); rs != nil {
+		t.Errorf("template desconhecido: %+v", rs)
+	}
+}
+
+func TestForTemplateReportsWhatIsMissing(t *testing.T) {
+	env := healthy(t)
+	delete(env.bins, "java")
+	delete(env.bins, "node")
+	if r := byName(ForTemplate(env, "quarkus-api"), "Java"); r.Status != Fail {
+		t.Errorf("Java ausente deveria falhar: %+v", r)
+	}
+	if r := byName(ForTemplate(env, "react-app"), "Node.js"); r.Status != Warn || r.Hint == "" {
+		t.Errorf("Node ausente deveria avisar: %+v", r)
+	}
+}

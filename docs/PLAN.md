@@ -400,6 +400,21 @@ Pipeline e Terraform reaproveitam os módulos das Fases 4 e 5. Integra com `forg
 
 ---
 
+## 5.1 Experiência de terminal (pós-Fase 10)
+
+- `forge` sem argumentos abre um menu interativo (banner, contexto e ações), `forge new` pergunta o template e avisa
+  o que falta na máquina para compilá-lo (`doctor.ForTemplate`), a ajuda do Cobra está em português.
+- `forge install`/`uninstall` (pacote `internal/install`): copia o binário para uma pasta do usuário e ajusta o PATH.
+  No Windows lê e grava o valor **bruto** do PATH do usuário no registro pelo PowerShell (`ExpandString`), para não
+  perder entradas com `%VAR%`; no Unix acrescenta uma linha marcada ao perfil do shell. Testado em Windows e Unix com
+  o sistema isolado.
+- `forge update` (pacote `internal/selfupdate`): API de releases do GitHub, `checksums.txt` obrigatório (sem ele não
+  instala), troca do executável em uso (renomeia para `.old`, que o `main` apaga na próxima execução). Aviso de versão
+  nova com cache de 24 h, silencioso em qualquer falha. Instalada a partir de um build local (`dev`), toda release conta
+  como mais nova.
+- Limite conhecido: o repositório é privado e ainda não há release, então `forge update` responde "nenhuma release
+  encontrada" até a `v1.0.0` sair.
+
 ## 6. Backlog pós-v1.0
 
 - MongoDB como segundo "perfil de persistência" (sem Flyway, Spring Data MongoDB, DocumentDB com aviso de compatibilidade parcial).

@@ -72,8 +72,20 @@ func Run(env Env) []Result {
 		checkMavenWrapper(env),
 		checkOptional(env, "terraform", []string{"version"}, "Terraform", MinTerraform, "necessário para validar a infra (Fases 5 e 7)"),
 		checkOptional(env, "aws", []string{"--version"}, "AWS CLI", "", "necessário para operar a conta AWS"),
-		checkOptional(env, "node", []string{"--version"}, "Node.js", strconv.Itoa(MinNode), "necessário para o template Angular"),
+		checkOptional(env, "node", []string{"--version"}, "Node.js", strconv.Itoa(MinNode), "necessário para os templates Angular e React"),
 	}
+}
+
+// ForTemplate roda só as checagens de que o template precisa para compilar e testar o projeto gerado.
+// Serve para avisar logo na escolha do template, sem esperar o `forge doctor` completo.
+func ForTemplate(env Env, template string) []Result {
+	switch template {
+	case "spring-api", "quarkus-api":
+		return []Result{checkJava(env), checkDocker(env)}
+	case "angular-app", "react-app":
+		return []Result{checkOptional(env, "node", []string{"--version"}, "Node.js", strconv.Itoa(MinNode), "necessário para compilar e testar o projeto")}
+	}
+	return nil
 }
 
 // Failed conta as checagens obrigatórias que falharam.

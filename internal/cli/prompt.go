@@ -10,6 +10,21 @@ import (
 // huhPrompter pergunta o que faltar com um formulário no terminal.
 type huhPrompter struct{}
 
+// ChooseType pergunta qual template gerar.
+func (huhPrompter) ChooseType(choices []TypeChoice) (string, error) {
+	options := make([]huh.Option[string], len(choices))
+	for i, c := range choices {
+		options[i] = huh.NewOption(c.Name+"  "+c.Description, c.Name)
+	}
+	chosen := choices[0].Name
+	err := huh.NewSelect[string]().
+		Title("Que tipo de projeto?").
+		Options(options...).
+		Value(&chosen).
+		Run()
+	return chosen, err
+}
+
 func (huhPrompter) Fill(m *template.Manifest, a *Answers) error {
 	var fields []huh.Field
 

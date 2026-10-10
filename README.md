@@ -7,7 +7,14 @@ Plano completo em [docs/PLAN.md](docs/PLAN.md).
 
 ## Uso
 
+Rode `forge` sem argumentos, num terminal, para abrir o **menu interativo**: ele mostra o banner, detecta o
+contexto (se você está dentro de um projeto do forge, se há versão nova, se o forge já está no PATH) e oferece só
+o que faz sentido: criar projeto, ver o que mudou no template, listar templates, verificar o ambiente, atualizar e
+instalar. Os comandos abaixo também funcionam direto, inclusive em scripts e no CI (sem terminal o `forge` só
+mostra a ajuda).
+
 ```sh
+forge                                          # menu interativo
 forge doctor                                   # confere Java 25, Docker e Git
 forge new                                      # formulário interativo
 forge new "Payments API" --package com.empresa # só pergunta o que faltar
@@ -56,11 +63,21 @@ Dentro de um projeto (ou `forge upgrade <dir> --diff`), regenera o projeto num d
 do `.forge.yaml` e mostra o diff unificado contra o projeto atual. Lista também os arquivos novos no template e os que
 só existem no projeto. Nada é sobrescrito; por isso só o modo `--diff` existe.
 
-## Instalação
+## Instalação e atualização
 ```sh
-go install github.com/ikauedev/forge/cmd/forge@latest
-brew install --cask ikauedev/tap/forge   # depois que o tap existir (ver Releases)
+go install github.com/ikauedev/forge/cmd/forge@latest   # ou baixe o binário da release
+forge install                                            # instala no seu usuário e põe no PATH
+forge update                                             # atualiza para a última release
 ```
+- `forge install` copia o executável para `%LOCALAPPDATA%\Programsorge` (Windows) ou `~/.local/bin` (Linux e
+  macOS) e registra a pasta no PATH do **usuário**; não precisa de administrador, preserva o PATH existente e é
+  idempotente (rodar de novo atualiza a cópia). Abra um novo terminal depois. `forge uninstall` desfaz tudo.
+- `forge update` consulta a última release no GitHub, baixa o binário do seu sistema, **confere o SHA-256** do
+  `checksums.txt` e troca o executável (`--check` só informa; `--yes` não pergunta). Em repositório privado use
+  `GITHUB_TOKEN`/`GH_TOKEN` ou entre com `gh auth login`. O menu avisa de versão nova no máximo uma vez por dia
+  (`FORGE_NO_UPDATE_CHECK=1` desliga o aviso).
+- Homebrew: `brew install --cask ikauedev/tap/forge` (depois que o tap existir; ver Releases).
+
 Binários para linux, macOS e Windows (amd64/arm64) e `checksums.txt` ficam em cada release.
 
 ## Pipeline gerada

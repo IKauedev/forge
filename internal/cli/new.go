@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 
+	"github.com/ikauedev/forge/internal/doctor"
 	"github.com/ikauedev/forge/internal/engine"
 	"github.com/ikauedev/forge/internal/names"
 	"github.com/ikauedev/forge/internal/project"
@@ -97,15 +98,23 @@ func newNewCmd() *cobra.Command {
 	f := newFlags{options: map[string]*string{}}
 	cmd := &cobra.Command{
 		Use:   "new [nome]",
-		Short: "Cria um novo projeto (Spring Boot ou Angular)",
-		Long: `Cria um projeto a partir de um template: spring-api (padrão) ou angular-app.
+		Short: "Cria um novo projeto (Spring Boot, Quarkus, Angular ou React)",
+		Long: `Cria um projeto a partir de um template: spring-api (padrão), quarkus-api, angular-app ou react-app.
 
-Sem o nome ou sem alguma opção, e em um terminal, abre um formulário interativo.
+Em um terminal, o que faltar (template, nome, pacote e opções) é perguntado em um formulário; ao escolher o
+template o forge avisa se falta algo na máquina para compilá-lo (Java, Docker, Node...).
 Com --yes (ou sem terminal) usa os padrões para o que não for informado.
-As opções --db, --vpc, --http, --auth e --cache e o --package valem para spring-api.`,
-		Example: `  forge new "Payments API"
+
+Opções por template:
+  spring-api   --package --db --vpc --http --auth (none|jwt|cognito) --cache
+  quarkus-api  --package --db --vpc --auth (none|jwt)
+  angular-app  (sem opções extras)
+  react-app    (sem opções extras)`,
+		Example: `  forge new                                  # formulário completo
+  forge new "Payments API"
   forge new payments-api --package com.empresa --http feign --auth cognito --cache redis
-  forge new storefront --type angular-app
+  forge new orders --type quarkus-api --db mysql
+  forge new storefront --type react-app
   forge new payments-api --yes`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -124,7 +133,60 @@ As opções --db, --vpc, --http, --auth e --cache e o --package valem para sprin
 	return cmd
 }
 
+// TypeChoice descreve um template para a pergunta "qual projeto?".
+type TypeChoice struct {
+	Name, Description string
+}
+
+// TypePrompter é implementado por quem sabe perguntar o template (o formulário real). É opcional:
+// sem ele, vale o --type (padrão spring-api).
+type TypePrompter interface {
+	ChooseType(choices []TypeChoice) (string, error)
+}
+
+func typeChoices() ([]TypeChoice, error) {
+	var out []TypeChoice
+	for _, name := range templates.Names {
+		_, m, err := loadTemplate(name)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, TypeChoice{Name: name, Description: m.Description})
+	}
+	return out, nil
+}
+
+// toolCheck é trocado nos testes.
+var toolCheck = func(template string) []doctor.Result { return doctor.ForTemplate(doctor.OSEnv{}, template) }
+
+// warnMissingTools avisa, já na escolha do template, o que falta na máquina para compilá-lo.
+// Não impede a geração: o projeto sai igual e o usuário pode instalar depois.
+func warnMissingTools(w io.Writer, template string) {
+	for _, r := range toolCheck(template) {
+		if r.Status != doctor.Fail && r.Status != doctor.Warn {
+			continue
+		}
+		msg := fmt.Sprintf("aviso: %s: %s", r.Name, r.Detail)
+		if r.Hint != "" {
+			msg += " (" + r.Hint + ")"
+		}
+		_, _ = fmt.Fprintln(w, msg)
+	}
+}
+
 func runNew(cmd *cobra.Command, args []string, f newFlags) error {
+	interactive := !f.yes && isTerminal()
+	if interactive && !cmd.Flags().Changed("type") {
+		if tp, ok := newPrompter.(TypePrompter); ok {
+			choices, err := typeChoices()
+			if err != nil {
+				return err
+			}
+			if f.typ, err = tp.ChooseType(choices); err != nil {
+				return err
+			}
+		}
+	}
 	_, manifest, err := loadTemplate(f.typ)
 	if err != nil {
 		return err
@@ -145,6 +207,10 @@ func runNew(cmd *cobra.Command, args []string, f newFlags) error {
 			return fmt.Errorf("--%s não se aplica ao template %s", name, f.typ)
 		}
 		a.Options[name] = *v
+	}
+
+	if interactive {
+		warnMissingTools(cmd.ErrOrStderr(), f.typ)
 	}
 
 	missing := a.Name == "" || (manifest.JavaPackage && !a.PackageSet) || len(a.Options) < len(manifest.Options)
