@@ -1,0 +1,4 @@
+clients:
+  viacep:
+    retry:
+      delay-ms: 10

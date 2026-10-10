@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payments_api
+    username: payments_api
+    password: payments_api

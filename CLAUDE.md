@@ -25,6 +25,7 @@ Plano completo em docs/PLAN.md. Execute UMA fase por vez.
 ## Regras
 - Templates de referência DEVEM compilar e passar nos testes sem passar pelo forge.
 - Arquivos de infra variáveis usam delimitadores [[ ]], nunca {{ }}.
+- Antes de compilar o forge, garanta que templates/*/target não existe (`./mvnw clean`): o go:embed incluiria os artefatos.
 - Nunca renderizar arquivos binários (jar, png, fontes). Preservar bit de execução (mvnw, scripts).
 - Todo nome gerado deve respeitar limites da AWS (ALB/target group 32, bucket 63, role IAM 64).
 - Nome de banco, schema e usuário sempre em snake_case minúsculo.
