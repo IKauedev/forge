@@ -30,6 +30,7 @@ archives:
         formats: [zip]
     files:
       - README.md
+      - LICENSE
 
 checksum:
   name_template: checksums.txt
@@ -48,18 +49,20 @@ release:
   draft: false
   prerelease: auto
 
-# Homebrew tap: exige o repositório ikauedev/homebrew-tap e o secret HOMEBREW_TAP_TOKEN
-# (token com acesso de escrita a esse repositório). Sem o token o release publica só os binários.
+# Homebrew tap (opcional): exige o repositório ikauedev/homebrew-tap e o secret HOMEBREW_TAP_TOKEN
+# (token com acesso de escrita a esse repositório). Sem o token o release publica só os binários:
+# `index .Env` não falha quando a variável não existe, e skip_upload pula o envio ao tap.
 homebrew_casks:
   - name: forge
     binaries: [forge]
     repository:
       owner: ikauedev
       name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+      token: '{{ index .Env "HOMEBREW_TAP_TOKEN" }}'
     homepage: https://github.com/ikauedev/forge
-    description: Gera projetos Spring Boot e Angular pré-configurados
-    skip_upload: auto
+    license: MIT
+    description: Gera projetos Spring Boot, Quarkus, Angular e React pré-configurados
+    skip_upload: '{{ if index .Env "HOMEBREW_TAP_TOKEN" }}auto{{ else }}true{{ end }}'
     # O binário não é assinado/notarizado: remove a quarentena do macOS na instalação.
     hooks:
       post:

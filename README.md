@@ -134,3 +134,7 @@ O embed do `angular-app` e do `react-app` lista os caminhos explicitamente (`tem
 O bit de execução do `mvnw` e de `*.sh` é restaurado por nome, pois o `embed.FS` não guarda permissões.
 Para adicionar um banco: [docs/ADDING_A_DATABASE.md](docs/ADDING_A_DATABASE.md). Para adicionar uma opção: declare em `options:` do manifesto, use as diretivas nos arquivos e rode os testes
 (o de 27 combinações garante que nada sobra e que YAML/XML continuam válidos).
+
+## Licença
+
+MIT (veja [LICENSE](LICENSE)). Os projetos gerados pelo forge não herdam a licença do forge.
