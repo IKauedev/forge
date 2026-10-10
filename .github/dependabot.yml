@@ -36,6 +36,11 @@ updates:
       - /templates/react-app
     schedule:
       interval: weekly
+    open-pull-requests-limit: 3
+    ignore:
+      # TypeScript 7 ainda não é aceito pelo typescript-eslint (<6.1) nem pelo Angular 22 (~6.0).
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: 'chore(deps)'
 

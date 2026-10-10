@@ -162,12 +162,26 @@ jobs:
           done
 
       - name: Terraform dos projetos gerados
+        env:
+          # O provider da AWS tem centenas de MB: um cache evita baixar uma cópia por diretório.
+          TF_PLUGIN_CACHE_DIR: ${{ runner.temp }}/tf-plugin-cache
         run: |
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
           for p in payments-api payments-slim store-front web-shop orders-quarkus orders-slim; do
             (cd "$RUNNER_TEMP/gen/$p/infra" && terraform fmt -check -recursive)
             for d in bootstrap envs/dev envs/prod; do
               (cd "$RUNNER_TEMP/gen/$p/infra/$d" && terraform init -backend=false -input=false >/dev/null && terraform validate)
             done
+          done
+
+      - name: tflint e checkov nos projetos gerados
+        run: |
+          for p in payments-api payments-slim store-front web-shop orders-quarkus orders-slim; do
+            docker run --rm -v "$RUNNER_TEMP/gen/$p/infra:/data" -w /data --entrypoint /bin/sh \
+              ghcr.io/terraform-linters/tflint:v0.64.0 \
+              -c 'tflint --init >/dev/null && tflint --recursive --config=/data/.tflint.hcl'
+            docker run --rm -v "$RUNNER_TEMP/gen/$p/infra:/tf" -w /tf \
+              bridgecrew/checkov:3.3.26 --config-file /tf/.checkov.yaml --compact --quiet
           done
 
       - name: Build do Angular gerado
