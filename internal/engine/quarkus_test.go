@@ -220,6 +220,13 @@ func TestQuarkusAuthOption(t *testing.T) {
 			t.Errorf("auth=none ainda menciona %q", banned)
 		}
 	}
+	mapper := "src/main/java/com/empresa/ordersapi/adapter/in/web/SecurityExceptionMapper.java"
+	if !exists(with, mapper) || exists(without, mapper) {
+		t.Error("o SecurityExceptionMapper (401/403 em problem+json) existe só com auth=jwt")
+	}
+	if !strings.Contains(readFile(t, with, mapper), "WWW_AUTHENTICATE") {
+		t.Error("o 401 deve devolver o desafio WWW-Authenticate")
+	}
 	if exists(without, "src/test/java/com/empresa/ordersapi/adapter/in/web/SecurityEndpointsTest.java") {
 		t.Error("o teste de segurança não deveria existir com auth=none")
 	}
@@ -290,5 +297,24 @@ func TestQuarkusRuntimeMatchesInfraConventions(t *testing.T) {
 	}
 	if !strings.Contains(readFile(t, dest, "Dockerfile"), "quarkus-run.jar") {
 		t.Error("o Dockerfile deve executar o fast-jar do Quarkus")
+	}
+}
+
+func TestQuarkusEnforcesCoverageAndHasAnEndToEndFlowTest(t *testing.T) {
+	for _, auth := range []string{"jwt", "none"} {
+		dest := genQuarkus(t, "Orders Api", template.Selection{"db": "none", "vpc": "new", "auth": auth})
+		pom := readFile(t, dest, "pom.xml")
+		for _, want := range []string{"quarkus-jacoco", "jacoco-quarkus.exec", "jacoco.min.line.coverage"} {
+			if !strings.Contains(pom, want) {
+				t.Errorf("auth=%s: pom.xml sem %q", auth, want)
+			}
+		}
+		flow := readFile(t, dest, "src/test/java/com/empresa/ordersapi/AddressFlowTest.java")
+		if strings.Contains(flow, "Mockito") || strings.Contains(flow, "InjectMock") {
+			t.Errorf("auth=%s: o teste de fluxo não pode usar mocks do caso de uso", auth)
+		}
+		if strings.Contains(flow, "isZero(), \"a segunda") {
+			t.Errorf("auth=%s: sem banco, a segunda consulta chama o provedor de novo", auth)
+		}
 	}
 }

@@ -23,6 +23,8 @@
     <archunit.version>1.5.1</archunit.version>
     <assertj.version>4.0.0-M1</assertj.version>
     <spotless.version>3.10.4</spotless.version>
+    <jacoco.version>0.8.15</jacoco.version>
+    <jacoco.min.line.coverage>0.60</jacoco.min.line.coverage>
     <skipITs>true</skipITs>
   </properties>
 
@@ -125,6 +127,11 @@
     </dependency>
     <!-- forge:end -->
     <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jacoco</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
       <version>${assertj.version}</version>
@@ -189,6 +196,37 @@
             <maven.home>${maven.home}</maven.home>
           </systemPropertyVariables>
         </configuration>
+      </plugin>
+      <plugin>
+        <!-- A extensão quarkus-jacoco coleta a cobertura dos @QuarkusTest (jacoco-quarkus.exec) e gera o
+             relatório em target/jacoco-report; aqui só se aplica o mínimo. -->
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <executions>
+          <execution>
+            <id>check</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <dataFile>${project.build.directory}/jacoco-quarkus.exec</dataFile>
+              <rules>
+                <rule>
+                  <element>BUNDLE</element>
+                  <limits>
+                    <limit>
+                      <counter>LINE</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>${jacoco.min.line.coverage}</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>com.diffplug.spotless</groupId>

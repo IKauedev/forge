@@ -11,12 +11,12 @@ public class GlobalExceptionMapper {
 
   @ServerExceptionMapper
   public RestResponse<ProblemDetail> invalidCep(InvalidCepException ex) {
-    return problem(400, "CEP inválido", ex.getMessage());
+    return ProblemDetail.response(400, "CEP inválido", ex.getMessage());
   }
 
   @ServerExceptionMapper
   public RestResponse<ProblemDetail> notFound(AddressNotFoundException ex) {
-    return problem(404, "Endereço não encontrado", ex.getMessage());
+    return ProblemDetail.response(404, "Endereço não encontrado", ex.getMessage());
   }
 
   @ServerExceptionMapper
@@ -31,17 +31,9 @@ public class GlobalExceptionMapper {
   }
 
   private static RestResponse<ProblemDetail> unavailable() {
-    return problem(
+    return ProblemDetail.response(
         503,
         "Serviço externo indisponível",
         "Não foi possível consultar o provedor de CEP. Tente novamente.");
-  }
-
-  private static RestResponse<ProblemDetail> problem(int status, String title, String detail) {
-    return RestResponse.ResponseBuilder.<ProblemDetail>create(
-            RestResponse.Status.fromStatusCode(status))
-        .entity(ProblemDetail.of(status, title, detail))
-        .type(ProblemDetail.MEDIA_TYPE)
-        .build();
   }
 }

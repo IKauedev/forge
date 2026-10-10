@@ -53,6 +53,7 @@ remove:
       - src/main/java/com/example/starterapi/adapter/in/web/MeResource.java
       - src/main/java/com/example/starterapi/adapter/in/web/AdminResource.java
       - src/main/java/com/example/starterapi/adapter/in/web/DevTokenResource.java
+      - src/main/java/com/example/starterapi/adapter/in/web/SecurityExceptionMapper.java
       - src/main/java/com/example/starterapi/shared/security/
       - src/test/java/com/example/starterapi/adapter/in/web/SecurityEndpointsTest.java
       - src/test/java/com/example/starterapi/adapter/in/web/DevTokenResourceTest.java

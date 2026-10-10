@@ -2,6 +2,7 @@ package com.example.starterapi.adapter.in.web;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 
 import com.example.starterapi.domain.model.Address;
@@ -26,7 +27,26 @@ class SecurityEndpointsTest {
 
   @Test
   void addressesRequireAuthentication() {
-    given().get("/api/addresses/01001000").then().statusCode(401);
+    given()
+        .get("/api/addresses/01001000")
+        .then()
+        .statusCode(401)
+        .contentType(containsString("application/problem+json"))
+        .header("WWW-Authenticate", "Bearer")
+        .body("title", equalTo("Não autenticado"))
+        .body("status", equalTo(401));
+  }
+
+  @Test
+  void anInvalidTokenIsAProblemDetailWith401() {
+    given()
+        .auth()
+        .oauth2("isto.nao.e-um-jwt")
+        .get("/api/addresses/01001000")
+        .then()
+        .statusCode(401)
+        .contentType(containsString("application/problem+json"))
+        .body("status", equalTo(401));
   }
 
   @Test
@@ -46,7 +66,13 @@ class SecurityEndpointsTest {
   @Test
   @TestSecurity(user = "ana", roles = Roles.USER)
   void adminAreaIsForbiddenForCommonUsers() {
-    given().get("/api/admin/ping").then().statusCode(403);
+    given()
+        .get("/api/admin/ping")
+        .then()
+        .statusCode(403)
+        .contentType(containsString("application/problem+json"))
+        .body("title", equalTo("Acesso negado"))
+        .body("status", equalTo(403));
   }
 
   @Test

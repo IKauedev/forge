@@ -13,8 +13,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** Provedor ViaCEP falso (servidor HTTP do JDK) para testar o adapter de ponta a ponta. */
 public class ViaCepStub implements QuarkusTestResourceLifecycleManager {
 
-  static final AtomicInteger calls = new AtomicInteger();
-  static final List<String> correlationIds = new CopyOnWriteArrayList<>();
+  public static final AtomicInteger calls = new AtomicInteger();
+  public static final List<String> correlationIds = new CopyOnWriteArrayList<>();
 
   private HttpServer server;
 

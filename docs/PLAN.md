@@ -423,6 +423,12 @@ Pipeline e Terraform reaproveitam os módulos das Fases 4 e 5. Integra com `forg
 - Validado em navegador real (Chrome) com os dois apps em containers e um IdP OIDC falso que confere o PKCE no servidor: login, volta por `/auth/callback`, página protegida, logout. Testes: 40 (Angular) e 43 (React).
 - Fora do escopo: criar o user pool/app client no provedor (documentado no README do projeto gerado) e refresh token (sessão vencida refaz o login).
 
+## 5.3 Quarkus: erros de segurança e cobertura
+
+- Erros **401 e 403** do `quarkus-api` saem em `application/problem+json` (`SecurityExceptionMapper`, só com `--auth jwt`): sem credencial, token inválido/vencido (com `WWW-Authenticate: Bearer`) e role insuficiente, cobertos em `SecurityEndpointsTest`.
+- **Cobertura mínima de 60%** (como o Spring): extensão `quarkus-jacoco` coleta dos `@QuarkusTest` e o `jacoco-maven-plugin` aplica o `check` sobre `jacoco-quarkus.exec`; o relatório fica em `target/jacoco-report` (artefato do CI do projeto).
+- Achado: testes unitários puros não entram no `jacoco-quarkus.exec`, e o `AddressResourceTest` mocka o caso de uso, então o domínio aparecia com 0%. O novo `AddressFlowTest` percorre a cadeia real (REST → caso de uso → domínio → ViaCEP falso → banco → mapeamento de erros) e levou a cobertura de 83% para 95% (referência). Sem ele a variante `none/none` ficava em 63%, perto do limite.
+
 ## 6. Backlog pós-v1.0
 
 - MongoDB como segundo "perfil de persistência" (sem Flyway, Spring Data MongoDB, DocumentDB com aviso de compatibilidade parcial).

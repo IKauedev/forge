@@ -6,7 +6,7 @@ Autenticação na AWS **somente por OIDC**: não existe access key nem secret da
 
 | Evento | Workflow | O que acontece |
 |---|---|---|
-| Pull request ou push em branch ≠ `main` | `ci.yml` | `./mvnw verify` (testes, Spotless, ArchUnit), Hadolint no `Dockerfile` e Trivy na imagem |
+| Pull request ou push em branch ≠ `main` | `ci.yml` | `./mvnw verify` (testes, Spotless, ArchUnit, cobertura mínima de 60% com JaCoCo), Hadolint no `Dockerfile` e Trivy na imagem |
 | Push na `main` | `deploy.yml` | build da imagem, push no ECR (tag = SHA do commit), deploy em **dev**, depois deploy em **prod** após aprovação |
 | Manual (`workflow_dispatch`) na `main` | `deploy.yml` | repete o fluxo acima para o commit atual |
 

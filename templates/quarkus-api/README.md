@@ -13,7 +13,7 @@ JDK 25 e Docker. Windows, Linux e macOS (o `Makefile` usa `mvnw.cmd` no Windows)
 <!-- forge:if db!=none -->
 | `make up` / `make down` | sobe / derruba um banco fixo (`compose.yaml`) no lugar do Dev Services |
 <!-- forge:end -->
-| `make test` | `mvnw verify`: testes, Spotless e ArchUnit |
+| `make test` | `mvnw verify`: testes, Spotless, ArchUnit e cobertura mínima de 60% (JaCoCo) |
 | `make image` | constrói a imagem Docker `starter-api:local` |
 | `make full` | aplicação (e banco) em containers (`compose.full.yaml`) |
 
@@ -54,7 +54,8 @@ Todo log leva o `correlationId` (cabeçalho `X-Correlation-Id`, repassado ao Via
 ## Segurança (JWT)
 Tokens JWT verificados pelo SmallRye JWT. Com `quarkus.security.jaxrs.deny-unannotated-endpoints=true` todo
 endpoint precisa declarar o acesso (`@Authenticated`, `@RolesAllowed` ou `@PermitAll`); um esquecido responde
-`403` em vez de ficar aberto. Erros 401/403 vêm sem corpo do Quarkus; ajuste se precisar de `problem+json`.
+`403` em vez de ficar aberto. Os erros 401 (sem token ou token inválido/vencido, com `WWW-Authenticate: Bearer`) e 403
+saem em `application/problem+json`, como os demais erros da API (`SecurityExceptionMapper`).
 
 | Perfil | Origem do JWT |
 |---|---|

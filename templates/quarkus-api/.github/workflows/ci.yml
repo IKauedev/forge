@@ -26,9 +26,17 @@ jobs:
           java-version: "25"
           cache: maven
 
-      # Testes, Spotless e ArchUnit. O Dev Services do Quarkus usa o Docker do runner.
+      # Testes, Spotless, ArchUnit e cobertura mínima. O Dev Services do Quarkus usa o Docker do runner.
       - name: Maven verify
         run: ./mvnw --batch-mode verify
+
+      - name: Relatório de cobertura (JaCoCo)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: jacoco-report
+          path: target/jacoco-report
+          if-no-files-found: ignore
 
   dockerfile-lint:
     name: Hadolint
