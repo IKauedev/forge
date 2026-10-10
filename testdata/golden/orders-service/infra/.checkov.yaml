@@ -13,6 +13,10 @@ skip-check:
   - CKV_AWS_2
   - CKV_AWS_378
   - CKV_AWS_260
+  # ALB de dev sem deletion protection, de propósito: o ambiente precisa poder ser destruído (prod liga a proteção).
+  - CKV_AWS_150
+  # Retenção de logs do CloudWatch é decisão de custo por ambiente (dev 30 dias, prod 90); o mínimo de 1 ano fica por sua conta.
+  - CKV_AWS_338
   # ALB: WAF e access logs exigem WAF/bucket dedicados; adicione se o seu risco pedir.
   - CKV2_AWS_28
   - CKV_AWS_91
