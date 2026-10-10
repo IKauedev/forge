@@ -30,3 +30,31 @@ usuário não-root, `MaxRAMPercentage=75` e `ExitOnOutOfMemoryError`.
 `GET /api/addresses/{cep}` consulta o CEP (ViaCEP) e guarda o resultado no banco.
 O cliente HTTP é escolhido por `clients.viacep.impl` (`feign` | `webclient`).
 Readiness: `/actuator/health/readiness`. Swagger só com o perfil `dev`.
+
+## Segurança (JWT)
+API stateless como *resource server* OAuth2. Tudo exige token, exceto `/actuator/health/**`, `/actuator/info`
+e a documentação OpenAPI. Erros 401/403 saem como `application/problem+json`.
+
+| Perfil | Origem do JWT |
+|---|---|
+| `local`, `test` | segredo HS256 de desenvolvimento (`app.security.dev-secret`) + `POST /dev/token` (só no `local`) |
+| `dev`, `prod` | `JWT_ISSUER_URI` (Cognito, Keycloak, Auth0...) via `issuer-uri` |
+
+```sh
+TOKEN=$(curl -s -X POST "localhost:8080/dev/token?sub=ana&roles=ADMIN,USER&scopes=orders:read" | jq -r .access_token)
+curl -H "Authorization: Bearer $TOKEN" localhost:8080/api/me
+```
+
+O claim de roles é configurável em `app.security.roles-claim` (padrão `roles`; no Cognito, `cognito:groups`).
+
+### Anotações personalizadas (`shared.security`)
+| Anotação | Equivale a |
+|---|---|
+| `@IsAuthenticated` | `isAuthenticated()` |
+| `@IsAdmin` | `hasRole('ADMIN')` |
+| `@HasRole("MANAGER")` | `hasRole('MANAGER')` |
+| `@HasAnyRole(roles = {"'USER'", "'ADMIN'"})` | `hasAnyRole('USER','ADMIN')` (aspas simples obrigatórias) |
+| `@HasScope("orders:read")` | `hasAuthority('SCOPE_orders:read')` |
+
+Valem em métodos e classes. `SecurityUtils.currentUser()` devolve o `CurrentUser` (subject, username, roles,
+scopes) para uso em adapters. Evite `@PostAuthorize` em métodos que gravam no banco.

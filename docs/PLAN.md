@@ -84,6 +84,8 @@ documentação oficial. Mostre o plano e espere minha aprovação antes de imple
 - Versões fixadas: Spring Boot 4.1.1, Spring Cloud 2025.1.3, Java 25, MapStruct 1.6.3, Testcontainers 2.0.5 (BOM do Boot), WireMock 3.13.2.
 - Desvio: não existe starter Resilience4j para Spring Boot 4. O template usa o resilience nativo do Spring Framework 7 (`@Retryable` + `@EnableResilientMethods`, configurado por propriedades `clients.viacep.retry.*`). **Circuit breaker ficou de fora**; revisitar quando houver suporte oficial.
 
+- Segurança: `spring-boot-starter-security-oauth2-resource-server`, JWT HS256 só em `local`/`test`, `issuer-uri` em `dev`/`prod`, meta-anotações em `shared.security` (decisão de 2026-10-10). O `--auth none|cognito` da Fase 6 vira variação desta base.
+
 **Critérios de aceite**
 - `./mvnw -q verify` verde (testes, Spotless, ArchUnit, JaCoCo).
 - Trocar `clients.viacep.impl` entre `feign` e `webclient` funciona (teste cobrindo ambos).
@@ -310,6 +312,27 @@ Fase 8 do docs/PLAN.md. Modo plano primeiro.
 **Critérios de aceite**
 - Release `v1.0.0` publicada com binários.
 - `forge upgrade --diff` mostra diferenças reais entre duas versões do template (teste com fixture).
+
+---
+
+### Fase 9: Template React (a detalhar em plan mode)
+
+Vite + React + TypeScript (conferir versões atuais em `npm view` e na documentação oficial), ESLint, Vitest,
+`config.json` em runtime, interceptor de auth/correlation id, guards por role espelhando as anotações do backend.
+Reaproveita `infra/` (S3 + CloudFront com OAC) e workflows da Fase 7. Integra com `forge new --type react-app`.
+
+**Critérios de aceite:** `npm run lint && npm test && npm run build` e `terraform validate` verdes no projeto gerado.
+
+---
+
+### Fase 10: Template Quarkus (a detalhar em plan mode)
+
+Quarkus na linha LTS atual (3.33 na pesquisa de 2026-10-10; confirmar em quarkus.io/releases), hexagonal com CDI,
+`quarkus-rest` + REST Client, Hibernate ORM com Panache + Flyway, Dev Services nos testes, SmallRye Fault Tolerance
+(circuit breaker nativo), segurança JWT com `@RolesAllowed`/anotações próprias, Dockerfile, compose, ArchUnit.
+Pipeline e Terraform reaproveitam os módulos das Fases 4 e 5. Integra com `forge new --type quarkus-api`.
+
+**Critérios de aceite:** `./mvnw verify` verde no template e no projeto gerado; `forge new --type` aceita os 4 tipos.
 
 ---
 

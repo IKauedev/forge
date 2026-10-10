@@ -37,6 +37,10 @@ springdoc:
   swagger-ui:
     enabled: false
 
+app:
+  security:
+    roles-claim: roles # claim do JWT com as roles (ex.: cognito:groups)
+
 clients:
   viacep:
     url: https://viacep.com.br/ws

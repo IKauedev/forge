@@ -4,6 +4,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -75,7 +76,7 @@ abstract class AbstractViaCepClientTest {
                          "bairro":"Sé","localidade":"São Paulo","uf":"SP"}
                         """)));
 
-    mvc.perform(get("/api/addresses/01001-000").header(CorrelationId.HEADER, "abc-123"))
+    mvc.perform(get("/api/addresses/01001-000").with(jwt()).header(CorrelationId.HEADER, "abc-123"))
         .andExpect(status().isOk())
         .andExpect(header().string(CorrelationId.HEADER, "abc-123"))
         .andExpect(jsonPath("$.cep").value("01001000"))
@@ -96,7 +97,7 @@ abstract class AbstractViaCepClientTest {
                     .withHeader("Content-Type", "application/json")
                     .withBody("{\"erro\":true}")));
 
-    mvc.perform(get("/api/addresses/99999999")).andExpect(status().isNotFound());
+    mvc.perform(get("/api/addresses/99999999").with(jwt())).andExpect(status().isNotFound());
   }
 
   @Test
@@ -104,7 +105,8 @@ abstract class AbstractViaCepClientTest {
     wireMock.stubFor(
         WireMock.get(urlEqualTo("/30130010/json")).willReturn(aResponse().withStatus(500)));
 
-    mvc.perform(get("/api/addresses/30130010")).andExpect(status().isServiceUnavailable());
+    mvc.perform(get("/api/addresses/30130010").with(jwt()))
+        .andExpect(status().isServiceUnavailable());
 
     // 1 tentativa + 2 retries (clients.viacep.retry.max-retries=2)
     wireMock.verify(3, getRequestedFor(urlEqualTo("/30130010/json")));
@@ -123,8 +125,8 @@ abstract class AbstractViaCepClientTest {
                          "bairro":"Centro","localidade":"Rio de Janeiro","uf":"RJ"}
                         """)));
 
-    mvc.perform(get("/api/addresses/20040020")).andExpect(status().isOk());
-    mvc.perform(get("/api/addresses/20040020")).andExpect(status().isOk());
+    mvc.perform(get("/api/addresses/20040020").with(jwt())).andExpect(status().isOk());
+    mvc.perform(get("/api/addresses/20040020").with(jwt())).andExpect(status().isOk());
 
     wireMock.verify(1, getRequestedFor(urlEqualTo("/20040020/json")));
   }
