@@ -1,4 +1,4 @@
-module github.com/ikauedeveloper/forge
+module github.com/ikauedev/forge
 
 go 1.26.2
 

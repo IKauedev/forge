@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ikauedeveloper/forge/internal/template"
+	"github.com/ikauedev/forge/internal/template"
 )
 
 // Diretivas ficam em comentários, então o template de referência segue válido:
@@ -111,14 +111,17 @@ func ProcessDirectivesWithSlots(name, content string, sel template.Selection, sl
 		return "", fmt.Errorf("%s:%d: forge:if/forge:slot sem forge:end", name, stack[len(stack)-1].line)
 	}
 	if changed && strings.HasSuffix(name, ".java") {
-		return pruneUnusedImports(tidyJava(out.String())), nil
+		return pruneUnusedImports(tidyBlankLines(out.String())), nil
+	}
+	if changed && strings.HasSuffix(name, ".tf") {
+		return tidyBlankLines(out.String()), nil
 	}
 	return out.String(), nil
 }
 
-// tidyJava remove as linhas em branco que a remoção de blocos deixa e que o google-java-format
-// rejeitaria: duplicadas, logo após "{" ou logo antes de "}".
-func tidyJava(src string) string {
+// tidyBlankLines remove as linhas em branco que a remoção de blocos deixa e que o google-java-format
+// e o terraform fmt rejeitariam: duplicadas, logo após "{" ou logo antes de "}".
+func tidyBlankLines(src string) string {
 	lines := strings.SplitAfter(src, "\n")
 	var out []string
 	for i, line := range lines {

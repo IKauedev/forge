@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ikauedeveloper/forge/internal/catalog"
-	"github.com/ikauedeveloper/forge/internal/engine"
-	"github.com/ikauedeveloper/forge/internal/template"
-	"github.com/ikauedeveloper/forge/templates"
+	"github.com/ikauedev/forge/internal/catalog"
+	"github.com/ikauedev/forge/internal/engine"
+	"github.com/ikauedev/forge/internal/template"
+	"github.com/ikauedev/forge/templates"
 )
 
 const (
@@ -30,42 +30,44 @@ func TestPostgresSlotsMatchTemplateReference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sel, err := manifest(t).Resolve(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sel = template.Selection{"db": "postgres", "http": "both", "auth": "jwt", "cache": "redis"}
-
-	src, _ := fs.Sub(templates.FS, templates.SpringAPI)
+	// Os slots são do catálogo, compartilhado pelos templates com banco: cada um precisa aparecer em
+	// pelo menos um deles, e o texto de referência de cada template tem de bater com o gerado.
 	used := map[string]bool{}
-	err = fs.WalkDir(src, ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || engine.IsBinary(p, nil) {
-			return err
+	for _, tpl := range []string{templates.SpringAPI, templates.QuarkusAPI} {
+		src, _ := fs.Sub(templates.FS, tpl)
+		sel := template.Selection{"db": "postgres", "vpc": "new", "http": "both", "auth": "jwt", "cache": "redis"}
+		if tpl == templates.QuarkusAPI {
+			sel = template.Selection{"db": "postgres", "vpc": "new", "auth": "jwt"}
 		}
-		b, err := fs.ReadFile(src, p)
-		if err != nil || !strings.Contains(string(b), "forge:slot") {
-			return err
-		}
-		reference, err := engine.ProcessDirectivesWithSlots(p, string(b), sel, nil)
-		if err != nil {
-			return err
-		}
-		generated, err := engine.ProcessDirectivesWithSlots(p, string(b), sel, slots)
-		if err != nil {
-			return err
-		}
-		if reference != generated {
-			t.Errorf("%s: o slot gerado para postgres difere do texto de referência.\n--- referência\n%s\n--- gerado\n%s", p, reference, generated)
-		}
-		for name := range slots {
-			if strings.Contains(string(b), "forge:slot "+name) {
-				used[name] = true
+		err = fs.WalkDir(src, ".", func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() || engine.IsBinary(p, nil) {
+				return err
 			}
+			b, err := fs.ReadFile(src, p)
+			if err != nil || !strings.Contains(string(b), "forge:slot") {
+				return err
+			}
+			reference, err := engine.ProcessDirectivesWithSlots(p, string(b), sel, nil)
+			if err != nil {
+				return err
+			}
+			generated, err := engine.ProcessDirectivesWithSlots(p, string(b), sel, slots)
+			if err != nil {
+				return err
+			}
+			if reference != generated {
+				t.Errorf("%s/%s: o slot gerado para postgres difere do texto de referência.\n--- referência\n%s\n--- gerado\n%s", tpl, p, reference, generated)
+			}
+			for name := range slots {
+				if strings.Contains(string(b), "forge:slot "+name) {
+					used[name] = true
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
 		}
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
 	for name := range slots {
 		if !used[name] {
@@ -190,6 +192,9 @@ func TestDatabaseNone(t *testing.T) {
 	}
 	for file, content := range files {
 		for _, absent := range []string{"@entity", "org.flywaydb", "jakarta.persistence", "db_url", "depends_on", "adminer"} {
+			if strings.HasPrefix(file, "infra/") && absent == "depends_on" {
+				continue // depends_on é do Terraform e não tem relação com o banco
+			}
 			if strings.HasSuffix(file, "ArchitectureTest.java") && absent == "jakarta.persistence" {
 				continue // a regra do ArchUnit proíbe JPA no domínio e precisa citá-lo
 			}

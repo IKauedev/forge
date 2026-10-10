@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ikauedeveloper/forge/internal/engine"
-	"github.com/ikauedeveloper/forge/internal/names"
-	"github.com/ikauedeveloper/forge/internal/template"
-	"github.com/ikauedeveloper/forge/templates"
+	"github.com/ikauedev/forge/internal/engine"
+	"github.com/ikauedev/forge/internal/names"
+	"github.com/ikauedev/forge/internal/template"
+	"github.com/ikauedev/forge/templates"
 )
 
 var update = flag.Bool("update", false, "regenera testdata/golden")

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 
-	"github.com/ikauedeveloper/forge/internal/catalog"
-	"github.com/ikauedeveloper/forge/internal/template"
+	"github.com/ikauedev/forge/internal/catalog"
+	"github.com/ikauedev/forge/internal/template"
 )
 
 // migrationDir é onde o template guarda as migrations Flyway.

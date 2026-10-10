@@ -239,9 +239,9 @@ func Print(w io.Writer, rs []Result, colored bool) {
 		default:
 			mark = paint("90", "-")
 		}
-		fmt.Fprintf(w, " %s %-14s %s\n", mark, r.Name, r.Detail)
+		_, _ = fmt.Fprintf(w, " %s %-14s %s\n", mark, r.Name, r.Detail)
 		if r.Hint != "" && r.Status != OK {
-			fmt.Fprintf(w, "   %s\n", paint("90", r.Hint))
+			_, _ = fmt.Fprintf(w, "   %s\n", paint("90", r.Hint))
 		}
 	}
 }

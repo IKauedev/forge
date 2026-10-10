@@ -1,0 +1,3 @@
+# Copie para backend.hcl (ignorado pelo git) e use: terraform init -backend-config=backend.hcl
+bucket = "payments-api-tfstate-123456789012" # saída "state_bucket" do bootstrap
+region = "us-east-1"

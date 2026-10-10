@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ikauedeveloper/forge/internal/template"
+	"github.com/ikauedev/forge/internal/template"
 )
 
 // smokeMatrix cobre cada valor de cada opção ao menos uma vez, sem o produto cartesiano.
@@ -68,6 +68,41 @@ func TestSmokeVerify(t *testing.T) {
 				run(t, dest, "docker", up...)
 				run(t, dest, "docker", append(composeArgs(dest), "down", "-v")...)
 			}
+
+			mvnw := "./mvnw"
+			if runtime.GOOS == "windows" {
+				mvnw = filepath.Join(dest, "mvnw.cmd")
+			}
+			run(t, dest, mvnw, "-q", "verify")
+		})
+	}
+}
+
+// quarkusSmokeMatrix cobre cada valor de cada opção do quarkus-api ao menos uma vez.
+var quarkusSmokeMatrix = []template.Selection{
+	{"db": "postgres", "vpc": "new", "auth": "jwt"}, // padrões
+	{"db": "mysql", "vpc": "existing", "auth": "none"},
+	{"db": "mariadb", "vpc": "new", "auth": "jwt"},
+	{"db": "none", "vpc": "new", "auth": "jwt"},
+	{"db": "none", "vpc": "existing", "auth": "none"}, // sem compose.yaml
+}
+
+// TestSmokeQuarkus gera cada projeto, valida o compose e roda ./mvnw verify (o Dev Services do Quarkus
+// sobe o banco nos testes). Requer JDK 25 (JAVA_HOME) e Docker.
+func TestSmokeQuarkus(t *testing.T) {
+	if os.Getenv("JAVA_HOME") == "" {
+		t.Skip("JAVA_HOME não definido (precisa de JDK 25)")
+	}
+	for _, sel := range quarkusSmokeMatrix {
+		t.Run(label(sel), func(t *testing.T) {
+			tmp, err := os.MkdirTemp("", "forge-smoke-qk-")
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = os.RemoveAll(tmp) })
+			dest := genQuarkusAt(t, filepath.Join(tmp, "payments-api"), "Payments API", sel)
+
+			run(t, dest, "docker", append(composeArgs(dest), "config", "-q")...)
 
 			mvnw := "./mvnw"
 			if runtime.GOOS == "windows" {

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ikauedeveloper/forge/internal/doctor"
-	"github.com/ikauedeveloper/forge/internal/project"
-	"github.com/ikauedeveloper/forge/internal/template"
+	"github.com/ikauedev/forge/internal/doctor"
+	"github.com/ikauedev/forge/internal/project"
+	"github.com/ikauedev/forge/internal/template"
 )
 
 func run(t *testing.T, args ...string) (string, error) {
@@ -158,11 +158,11 @@ func TestInteractiveAndFlagsProduceIdenticalOutput(t *testing.T) {
 }
 
 func TestPromptOnlyAsksForWhatIsMissing(t *testing.T) {
-	fp := &fakePrompter{pkg: "com.empresa", options: map[string]string{"db": "postgres", "http": "both", "auth": "jwt", "cache": "none"}}
+	fp := &fakePrompter{pkg: "com.empresa", options: map[string]string{"db": "postgres", "vpc": "new", "http": "both", "auth": "jwt", "cache": "none"}}
 	withPrompt(t, fp, true)
 	out := t.TempDir()
 	if _, err := run(t, "new", "complete", "--package", "com.empresa", "--out", out, "--no-git",
-		"--db", "postgres", "--http", "both", "--auth", "jwt", "--cache", "none"); err != nil {
+		"--db", "postgres", "--vpc", "new", "--http", "both", "--auth", "jwt", "--cache", "none"); err != nil {
 		t.Fatal(err)
 	}
 	if fp.called {
@@ -260,6 +260,145 @@ func TestDoctorExitsNonZeroWhenRequiredMissing(t *testing.T) {
 	for _, want := range []string{"Docker", "Java", "obrigatória"} {
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("relatório deveria citar %q:\n%s", want, buf.String())
+		}
+	}
+}
+
+func TestNewAngularApp(t *testing.T) {
+	withPrompt(t, &fakePrompter{}, false)
+	out := t.TempDir()
+	stdout, err := run(t, "new", "Store Front", "--type", "angular-app", "--out", out, "--no-git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(out, "store-front")
+	for _, rel := range []string{"package.json", "src/app/app.ts", "infra/envs/dev/main.tf", ".forge.yaml"} {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
+			t.Errorf("%s ausente", rel)
+		}
+	}
+	if !strings.Contains(stdout, "npm ci") || strings.Contains(stdout, "mvnw") {
+		t.Errorf("os próximos passos deveriam ser os do Angular:\n%s", stdout)
+	}
+	cfg, err := project.Read(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Template != "angular-app" || cfg.Project.Package != "" {
+		t.Errorf(".forge.yaml inesperado: %+v", cfg)
+	}
+}
+
+func TestNewRejectsOptionsOfAnotherTemplate(t *testing.T) {
+	withPrompt(t, &fakePrompter{}, false)
+	for _, args := range [][]string{
+		{"new", "app", "--type", "angular-app", "--db", "mysql"},
+		{"new", "app", "--type", "angular-app", "--package", "com.empresa"},
+		{"new", "app", "--type", "react"},
+	} {
+		if _, err := run(t, append(args, "--out", t.TempDir(), "--no-git")...); err == nil {
+			t.Errorf("%v deveria falhar", args)
+		}
+	}
+}
+
+func TestUpgradeDiffOnFreshAndEditedProject(t *testing.T) {
+	withPrompt(t, &fakePrompter{}, false)
+	out := t.TempDir()
+	if _, err := run(t, "new", "Store Front", "--type", "angular-app", "--out", out, "--no-git"); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(out, "store-front")
+
+	got, err := run(t, "upgrade", dir, "--diff")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, "já está igual") {
+		t.Errorf("projeto recém-gerado não deveria ter diferenças:\n%s", got)
+	}
+
+	readme := filepath.Join(dir, "README.md")
+	if err := os.WriteFile(readme, []byte("# editado\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err = run(t, "upgrade", dir, "--diff")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, "--- projeto/README.md") || !strings.Contains(got, "1 alterado(s)") {
+		t.Errorf("diff do README ausente:\n%s", got)
+	}
+	if b, _ := os.ReadFile(readme); string(b) != "# editado\n" {
+		t.Error("o upgrade não pode alterar o projeto")
+	}
+}
+
+func TestUpgradeRequiresDiffAndAProject(t *testing.T) {
+	if _, err := run(t, "upgrade", t.TempDir()); err == nil {
+		t.Error("sem --diff deveria falhar")
+	}
+	if _, err := run(t, "upgrade", t.TempDir(), "--diff"); err == nil {
+		t.Error("fora de um projeto do forge deveria falhar")
+	}
+}
+
+func TestNewReactApp(t *testing.T) {
+	withPrompt(t, &fakePrompter{}, false)
+	out := t.TempDir()
+	stdout, err := run(t, "new", "Store Front", "--type", "react-app", "--out", out, "--no-git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(out, "store-front")
+	for _, rel := range []string{"package.json", "src/main.tsx", "src/core/auth/guards.tsx", "infra/envs/dev/main.tf"} {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
+			t.Errorf("%s ausente", rel)
+		}
+	}
+	if !strings.Contains(stdout, "npm ci") {
+		t.Errorf("os próximos passos deveriam ser os do React:\n%s", stdout)
+	}
+	if _, err := run(t, "new", "app", "--type", "react-app", "--auth", "jwt", "--out", t.TempDir(), "--no-git"); err == nil {
+		t.Error("--auth não se aplica ao react-app")
+	}
+}
+
+func TestNewQuarkusApi(t *testing.T) {
+	withPrompt(t, &fakePrompter{}, false)
+	out := t.TempDir()
+	stdout, err := run(t, "new", "Orders Api", "--type", "quarkus-api", "--db", "mysql", "--auth", "none",
+		"--package", "com.empresa", "--out", out, "--no-git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(out, "orders-api")
+	for _, rel := range []string{"pom.xml", "src/main/java/com/empresa/ordersapi/adapter/in/web/AddressResource.java", "infra/envs/dev/main.tf", ".forge.yaml"} {
+		if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(rel))); err != nil {
+			t.Errorf("%s ausente", rel)
+		}
+	}
+	if !strings.Contains(stdout, "quarkus:dev") || strings.Contains(stdout, "mvnw verify   # requer") {
+		t.Errorf("os próximos passos deveriam ser os do Quarkus:\n%s", stdout)
+	}
+	cfg, err := project.Read(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Template != "quarkus-api" || cfg.Options["db"] != "mysql" || cfg.Options["auth"] != "none" || cfg.Project.Package != "com.empresa" {
+		t.Errorf(".forge.yaml inesperado: %+v", cfg)
+	}
+}
+
+func TestQuarkusRejectsOptionsItDoesNotHave(t *testing.T) {
+	withPrompt(t, &fakePrompter{}, false)
+	for _, args := range [][]string{
+		{"new", "app", "--type", "quarkus-api", "--http", "feign"},   // sem cliente HTTP configurável
+		{"new", "app", "--type", "quarkus-api", "--cache", "redis"},  // sem cache
+		{"new", "app", "--type", "quarkus-api", "--auth", "cognito"}, // só none|jwt
+	} {
+		if _, err := run(t, append(args, "--out", t.TempDir(), "--no-git")...); err == nil {
+			t.Errorf("%v deveria falhar", args)
 		}
 	}
 }

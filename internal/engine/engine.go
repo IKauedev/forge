@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ikauedeveloper/forge/internal/names"
-	"github.com/ikauedeveloper/forge/internal/template"
+	"github.com/ikauedev/forge/internal/names"
+	"github.com/ikauedev/forge/internal/template"
 )
 
 // Valores de referência presentes nos templates.
@@ -32,7 +32,7 @@ type Options struct {
 	Selection template.Selection
 }
 
-var skippedDirs = map[string]bool{"target": true, ".git": true, "node_modules": true}
+var skippedDirs = map[string]bool{"target": true, ".git": true, "node_modules": true, "dist": true, ".angular": true, ".terraform": true}
 
 var binaryExts = map[string]bool{
 	".jar": true, ".class": true, ".png": true, ".jpg": true, ".jpeg": true, ".gif": true,
@@ -40,22 +40,39 @@ var binaryExts = map[string]bool{
 	".zip": true, ".gz": true, ".pdf": true,
 }
 
-// Replacer devolve o substituidor das sentinelas. A ordem importa: strings.Replacer dá
-// prioridade ao par que aparece primeiro, então os mais longos/específicos vêm antes.
+// Replacer devolve o substituidor das sentinelas do template spring-api.
 func Replacer(n names.Names, pkg string) *strings.Replacer {
-	pkgPath := strings.ReplaceAll(pkg, ".", "/")
-	return strings.NewReplacer(
-		refPackage+"."+refFlat, pkg+"."+n.Flat,
-		strings.ReplaceAll(refPackage, ".", "/")+"/"+refFlat, pkgPath+"/"+n.Flat,
-		refPackage, pkg,
-		strings.ReplaceAll(refPackage, ".", "/"), pkgPath,
-		"STARTER_API", n.Upper,
-		"StarterApi", n.Pascal,
-		"starter-api", n.Kebab,
-		"starter_api", n.Snake,
-		"Starter Api", n.Title,
-		refFlat, n.Flat,
-	)
+	return replacerFor(template.DefaultSentinel, true, n, pkg)
+}
+
+// replacerFor monta o substituidor da sentinela kebab informada (ex.: starter-app). A ordem importa:
+// strings.Replacer dá prioridade ao par que aparece primeiro, então os mais longos/específicos vêm antes.
+func replacerFor(sentinel string, javaPackage bool, n names.Names, pkg string) *strings.Replacer {
+	words := strings.Split(sentinel, "-")
+	pascal, title := make([]string, len(words)), make([]string, len(words))
+	for i, w := range words {
+		pascal[i] = strings.ToUpper(w[:1]) + w[1:]
+	}
+	copy(title, pascal)
+
+	var pairs []string
+	if javaPackage {
+		pkgPath := strings.ReplaceAll(pkg, ".", "/")
+		pairs = append(pairs,
+			refPackage+"."+refFlat, pkg+"."+n.Flat,
+			strings.ReplaceAll(refPackage, ".", "/")+"/"+refFlat, pkgPath+"/"+n.Flat,
+			refPackage, pkg,
+			strings.ReplaceAll(refPackage, ".", "/"), pkgPath,
+		)
+	}
+	return strings.NewReplacer(append(pairs,
+		strings.ToUpper(strings.Join(words, "_")), n.Upper,
+		strings.Join(pascal, ""), n.Pascal,
+		sentinel, n.Kebab,
+		strings.Join(words, "_"), n.Snake,
+		strings.Join(title, " "), n.Title,
+		strings.Join(words, ""), n.Flat,
+	)...)
 }
 
 // IsExecutable informa se o arquivo gerado precisa do bit de execução. O embed.FS não preserva
@@ -79,14 +96,16 @@ func IsBinary(name string, content []byte) bool {
 
 // Generate copia src (raiz do template) para opts.Dest e devolve os caminhos gerados.
 func Generate(src fs.FS, opts Options) ([]string, error) {
-	if err := names.ValidatePackage(opts.Package); err != nil {
-		return nil, err
-	}
-	if err := ensureEmptyDest(opts.Dest); err != nil {
-		return nil, err
-	}
 	manifest, err := LoadManifest(src)
 	if err != nil {
+		return nil, err
+	}
+	if manifest.JavaPackage {
+		if err := names.ValidatePackage(opts.Package); err != nil {
+			return nil, err
+		}
+	}
+	if err := ensureEmptyDest(opts.Dest); err != nil {
 		return nil, err
 	}
 	sel, err := manifest.Resolve(opts.Selection)
@@ -97,7 +116,7 @@ func Generate(src fs.FS, opts Options) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	rep := Replacer(opts.Names, opts.Package)
+	rep := replacerFor(manifest.SentinelName(), manifest.JavaPackage, opts.Names, opts.Package)
 	slots, overrides, err := databaseAssets(sel)
 	if err != nil {
 		return nil, err

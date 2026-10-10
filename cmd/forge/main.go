@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ikauedeveloper/forge/internal/cli"
+	"github.com/ikauedev/forge/internal/cli"
 )
 
 func main() {

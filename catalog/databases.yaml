@@ -4,7 +4,8 @@
 # Convenções:
 #   - env.extra: linhas "CHAVE: valor" extras no environment do container.
 #   - healthcheck: comando do healthcheck do compose; use $$ para escapar o $ do compose.
-#   - aws: usado pela infra Terraform (Fase 5).
+#   - aws: usado pela infra Terraform (engine, versão maior, family do parameter group, porta e
+#     logs exportados para o CloudWatch).
 databases:
   - name: postgres
     description: PostgreSQL 17
@@ -28,6 +29,7 @@ databases:
       engine: postgres
       version: "17"
       family: postgres17
+      log_exports: [postgresql, upgrade]
       port: 5432
 
   - name: mysql
@@ -54,6 +56,7 @@ databases:
       engine: mysql
       version: "8.4"
       family: mysql8.4
+      log_exports: [error, slowquery]
       port: 3306
 
   - name: mariadb
@@ -80,4 +83,5 @@ databases:
       engine: mariadb
       version: "11.8"
       family: mariadb11.8
+      log_exports: [error, slowquery]
       port: 3306

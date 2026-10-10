@@ -35,11 +35,31 @@ type Removal struct {
 
 // Manifest é o conteúdo de template.forge.yaml.
 type Manifest struct {
-	Name        string            `yaml:"name"`
-	Description string            `yaml:"description"`
-	Options     []Option          `yaml:"options"`
-	Reference   map[string]string `yaml:"reference"`
-	Remove      []Removal         `yaml:"remove"`
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+
+	// Sentinel é o nome kebab de referência do template (ex.: starter-api); as demais formas são
+	// derivadas dele. Vazio usa starter-api.
+	Sentinel string `yaml:"sentinel"`
+	// JavaPackage indica que o template usa o pacote base Java (com.example) e, portanto, --package.
+	JavaPackage bool `yaml:"java_package"`
+	// NextSteps são os comandos sugeridos depois de gerar o projeto.
+	NextSteps []string `yaml:"next_steps"`
+
+	Options   []Option          `yaml:"options"`
+	Reference map[string]string `yaml:"reference"`
+	Remove    []Removal         `yaml:"remove"`
+}
+
+// DefaultSentinel é a sentinela dos templates que não declaram a sua.
+const DefaultSentinel = "starter-api"
+
+// SentinelName devolve a sentinela kebab do template.
+func (m *Manifest) SentinelName() string {
+	if m.Sentinel == "" {
+		return DefaultSentinel
+	}
+	return m.Sentinel
 }
 
 // Selection é a escolha final de cada opção (todas preenchidas e validadas).

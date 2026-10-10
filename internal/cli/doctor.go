@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/ikauedeveloper/forge/internal/doctor"
+	"github.com/ikauedev/forge/internal/doctor"
 )
 
 // ExitError faz o main sair com um código específico sem imprimir mensagem extra.
@@ -33,10 +33,10 @@ func runDoctor(cmd *cobra.Command, env doctor.Env, colored bool) error {
 	results := doctor.Run(env)
 	doctor.Print(w, results, colored)
 	if n := doctor.Failed(results); n > 0 {
-		fmt.Fprintf(w, "\n%d verificação(ões) obrigatória(s) falharam.\n", n)
+		_, _ = fmt.Fprintf(w, "\n%d verificação(ões) obrigatória(s) falharam.\n", n)
 		return &ExitError{Code: 1}
 	}
-	fmt.Fprintln(w, "\nAmbiente pronto.")
+	_, _ = fmt.Fprintln(w, "\nAmbiente pronto.")
 	return nil
 }
 

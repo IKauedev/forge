@@ -35,7 +35,7 @@ func TestTidyJava(t *testing.T) {
 	}
 }
 
-func TestTidyJavaLeavesUntouchedFilesAlone(t *testing.T) {
+func TestTidyLeavesUntouchedFilesAlone(t *testing.T) {
 	in := "class B {\n\n}\n"
 	got, err := ProcessDirectives("B.java", in, sel())
 	if err != nil {

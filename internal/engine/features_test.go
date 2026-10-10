@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ikauedeveloper/forge/internal/template"
+	"github.com/ikauedev/forge/internal/template"
 )
 
 func sel(kv ...string) template.Selection {

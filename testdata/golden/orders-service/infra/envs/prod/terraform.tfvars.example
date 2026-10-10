@@ -1,0 +1,11 @@
+aws_region = "us-east-1"
+
+# Imagem já enviada ao ECR pelo job de build (tag = SHA do commit)
+container_image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/orders-service:COMMIT_SHA"
+
+# Obrigatório em produção (HTTPS no ALB)
+certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/..."
+
+jwt_issuer_uri = "https://issuer.example.com"
+
+redis_host = "meu-redis.exemplo.cache.amazonaws.com"

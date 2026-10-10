@@ -7,25 +7,30 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 
-	"github.com/ikauedeveloper/forge/internal/engine"
-	"github.com/ikauedeveloper/forge/internal/names"
-	"github.com/ikauedeveloper/forge/internal/project"
-	"github.com/ikauedeveloper/forge/internal/template"
-	"github.com/ikauedeveloper/forge/templates"
+	"github.com/ikauedev/forge/internal/engine"
+	"github.com/ikauedev/forge/internal/names"
+	"github.com/ikauedev/forge/internal/project"
+	"github.com/ikauedev/forge/internal/template"
+	"github.com/ikauedev/forge/templates"
 )
 
 // Version é a versão do forge; o release define via -ldflags "-X .../internal/cli.Version=...".
 var Version = "dev"
 
-const defaultPackage = "com.example"
+const (
+	defaultPackage = "com.example"
+	defaultType    = templates.SpringAPI
+)
 
 // Answers reúne tudo o que define um projeto gerado.
 type Answers struct {
+	Type       string // template (spring-api, angular-app)
 	Name       string
 	Package    string
 	PackageSet bool // o pacote veio de flag (não precisa perguntar)
@@ -44,6 +49,7 @@ var (
 )
 
 type newFlags struct {
+	typ     string
 	pkg     string
 	out     string
 	noGit   bool
@@ -51,8 +57,11 @@ type newFlags struct {
 	options map[string]*string
 }
 
-func loadSpringTemplate() (fs.FS, *template.Manifest, error) {
-	src, err := fs.Sub(templates.FS, templates.SpringAPI)
+func loadTemplate(name string) (fs.FS, *template.Manifest, error) {
+	if !slices.Contains(templates.Names, name) {
+		return nil, nil, fmt.Errorf("template %q desconhecido; use um de: %s", name, strings.Join(templates.Names, ", "))
+	}
+	src, err := fs.Sub(templates.FS, name)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -60,32 +69,55 @@ func loadSpringTemplate() (fs.FS, *template.Manifest, error) {
 	return src, m, err
 }
 
+// optionFlags junta as opções de todos os templates, uma flag por nome. Qual vale é decidido em
+// runNew, pelo --type escolhido.
+func optionFlags() ([]template.Option, error) {
+	var all []template.Option
+	seen := map[string]bool{}
+	for _, name := range templates.Names {
+		_, m, err := loadTemplate(name)
+		if err != nil {
+			return nil, err
+		}
+		for _, o := range m.Options {
+			if !seen[o.Name] {
+				seen[o.Name] = true
+				all = append(all, o)
+			}
+		}
+	}
+	return all, nil
+}
+
 func newNewCmd() *cobra.Command {
-	_, manifest, err := loadSpringTemplate()
+	opts, err := optionFlags()
 	if err != nil {
 		panic(err) // manifesto embutido inválido: erro de build do forge
 	}
 	f := newFlags{options: map[string]*string{}}
 	cmd := &cobra.Command{
 		Use:   "new [nome]",
-		Short: "Cria um novo projeto Spring Boot",
-		Long: `Cria um projeto a partir do template spring-api.
+		Short: "Cria um novo projeto (Spring Boot ou Angular)",
+		Long: `Cria um projeto a partir de um template: spring-api (padrão) ou angular-app.
 
 Sem o nome ou sem alguma opção, e em um terminal, abre um formulário interativo.
-Com --yes (ou sem terminal) usa os padrões para o que não for informado.`,
+Com --yes (ou sem terminal) usa os padrões para o que não for informado.
+As opções --db, --vpc, --http, --auth e --cache e o --package valem para spring-api.`,
 		Example: `  forge new "Payments API"
   forge new payments-api --package com.empresa --http feign --auth cognito --cache redis
+  forge new storefront --type angular-app
   forge new payments-api --yes`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runNew(cmd, args, f)
 		},
 	}
-	cmd.Flags().StringVar(&f.pkg, "package", defaultPackage, "pacote base Java")
+	cmd.Flags().StringVar(&f.typ, "type", defaultType, "template: "+strings.Join(templates.Names, " | "))
+	cmd.Flags().StringVar(&f.pkg, "package", defaultPackage, "pacote base Java (spring-api)")
 	cmd.Flags().StringVar(&f.out, "out", ".", "diretório pai; o projeto é criado em <out>/<nome-kebab>")
 	cmd.Flags().BoolVar(&f.noGit, "no-git", false, "não executar git init")
 	cmd.Flags().BoolVarP(&f.yes, "yes", "y", false, "não perguntar nada; usar os padrões")
-	for _, o := range manifest.Options {
+	for _, o := range opts {
 		f.options[o.Name] = cmd.Flags().String(o.Name, "",
 			fmt.Sprintf("%s (%s; padrão %s)", o.Description, strings.Join(o.Values, "|"), o.Default))
 	}
@@ -93,22 +125,29 @@ Com --yes (ou sem terminal) usa os padrões para o que não for informado.`,
 }
 
 func runNew(cmd *cobra.Command, args []string, f newFlags) error {
-	_, manifest, err := loadSpringTemplate()
+	_, manifest, err := loadTemplate(f.typ)
 	if err != nil {
 		return err
 	}
 
-	a := Answers{Package: f.pkg, PackageSet: cmd.Flags().Changed("package"), Options: map[string]string{}}
+	a := Answers{Type: f.typ, Package: f.pkg, PackageSet: cmd.Flags().Changed("package"), Options: map[string]string{}}
 	if len(args) == 1 {
 		a.Name = args[0]
 	}
+	if a.PackageSet && !manifest.JavaPackage {
+		return fmt.Errorf("--package não se aplica ao template %s", f.typ)
+	}
 	for name, v := range f.options {
-		if *v != "" {
-			a.Options[name] = *v
+		if *v == "" {
+			continue
 		}
+		if _, ok := manifest.Option(name); !ok {
+			return fmt.Errorf("--%s não se aplica ao template %s", name, f.typ)
+		}
+		a.Options[name] = *v
 	}
 
-	missing := a.Name == "" || !a.PackageSet || len(a.Options) < len(manifest.Options)
+	missing := a.Name == "" || (manifest.JavaPackage && !a.PackageSet) || len(a.Options) < len(manifest.Options)
 	if missing && !f.yes && isTerminal() {
 		if err := newPrompter.Fill(manifest, &a); err != nil {
 			return err
@@ -126,12 +165,19 @@ func createProject(w, errW io.Writer, a Answers, out string, noGit bool) error {
 	if err != nil {
 		return err
 	}
-	if err := names.ValidatePackage(a.Package); err != nil {
-		return err
+	if a.Type == "" {
+		a.Type = defaultType
 	}
-	src, manifest, err := loadSpringTemplate()
+	src, manifest, err := loadTemplate(a.Type)
 	if err != nil {
 		return err
+	}
+	if manifest.JavaPackage {
+		if err := names.ValidatePackage(a.Package); err != nil {
+			return err
+		}
+	} else {
+		a.Package = ""
 	}
 	sel, err := manifest.Resolve(a.Options)
 	if err != nil {
@@ -153,18 +199,21 @@ func createProject(w, errW io.Writer, a Answers, out string, noGit bool) error {
 		return err
 	}
 
-	fmt.Fprintf(w, "Projeto %q criado em %s (%d arquivos)\n", n.Title, dest, len(files)+1)
+	_, _ = fmt.Fprintf(w, "Projeto %q criado em %s (%d arquivos)\n", n.Title, dest, len(files)+1)
 	for _, k := range sel.SortedKeys() {
-		fmt.Fprintf(w, "  %s = %s\n", k, sel[k])
+		_, _ = fmt.Fprintf(w, "  %s = %s\n", k, sel[k])
 	}
 
 	if !noGit {
 		if err := gitInit(dest); err != nil {
-			fmt.Fprintf(errW, "aviso: git init falhou: %v\n", err)
+			_, _ = fmt.Fprintf(errW, "aviso: git init falhou: %v\n", err)
 		}
 	}
 
-	fmt.Fprintf(w, "\nPróximos passos:\n  cd %s\n  ./mvnw verify   # requer JDK 25 e Docker (Testcontainers)\n  forge doctor     # confere o ambiente\n", dest)
+	_, _ = fmt.Fprintf(w, "\nPróximos passos:\n  cd %s\n", dest)
+	for _, step := range manifest.NextSteps {
+		_, _ = fmt.Fprintf(w, "  %s\n", step)
+	}
 	return nil
 }
 

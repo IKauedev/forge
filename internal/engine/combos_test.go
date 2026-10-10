@@ -12,9 +12,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/ikauedeveloper/forge/internal/engine"
-	"github.com/ikauedeveloper/forge/internal/template"
-	"github.com/ikauedeveloper/forge/templates"
+	"github.com/ikauedev/forge/internal/engine"
+	"github.com/ikauedev/forge/internal/template"
+	"github.com/ikauedev/forge/templates"
 )
 
 func manifest(t *testing.T) *template.Manifest {
@@ -77,14 +77,15 @@ func TestManifestReferenceIsAnOption(t *testing.T) {
 func TestEveryCombinationIsCleanAndWellFormed(t *testing.T) {
 	m := manifest(t)
 	combos := allSelections(m)
-	if len(combos) != 108 { // 4 bancos x 3 http x 3 auth x 3 cache
-		t.Fatalf("esperava 108 combinações, há %d", len(combos))
+	if len(combos) != 216 { // 4 bancos x 2 vpc x 3 http x 3 auth x 3 cache
+		t.Fatalf("esperava 216 combinações, há %d", len(combos))
 	}
 	for _, sel := range combos {
 		t.Run(label(sel), func(t *testing.T) {
 			dest := filepath.Join(t.TempDir(), "orders-api")
 			files := generateWith(t, "Orders API", "com.empresa", dest, sel)
 			checkWorkflows(t, dest, "orders-api")
+			checkInfra(t, dest, sel)
 
 			for _, rel := range files {
 				if rel == template.ManifestFile {

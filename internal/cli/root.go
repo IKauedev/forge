@@ -7,11 +7,11 @@ import "github.com/spf13/cobra"
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "forge",
-		Short:         "Gera projetos Spring Boot pré-configurados",
+		Short:         "Gera projetos Spring Boot e Angular pré-configurados",
 		Version:       Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.AddCommand(newNewCmd(), newListCmd(), newDoctorCmd())
+	root.AddCommand(newNewCmd(), newListCmd(), newDoctorCmd(), newUpgradeCmd())
 	return root
 }

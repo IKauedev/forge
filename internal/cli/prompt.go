@@ -3,8 +3,8 @@ package cli
 import (
 	"github.com/charmbracelet/huh"
 
-	"github.com/ikauedeveloper/forge/internal/names"
-	"github.com/ikauedeveloper/forge/internal/template"
+	"github.com/ikauedev/forge/internal/names"
+	"github.com/ikauedev/forge/internal/template"
 )
 
 // huhPrompter pergunta o que faltar com um formulário no terminal.
@@ -23,7 +23,7 @@ func (huhPrompter) Fill(m *template.Manifest, a *Answers) error {
 				return err
 			}))
 	}
-	if !a.PackageSet {
+	if m.JavaPackage && !a.PackageSet {
 		if a.Package == "" {
 			a.Package = defaultPackage
 		}

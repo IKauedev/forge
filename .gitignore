@@ -7,3 +7,8 @@ testdata/**/.settings/
 testdata/**/.project
 testdata/**/.classpath
 testdata/**/.factorypath
+
+# Terraform (o .terraform.lock.hcl é versionado)
+.terraform/
+*.tfstate
+*.tfstate.*

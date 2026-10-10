@@ -26,7 +26,7 @@ type ForgeInfo struct {
 
 type ProjectInfo struct {
 	Name    string `yaml:"name"`
-	Package string `yaml:"package"`
+	Package string `yaml:"package,omitempty"`
 }
 
 const header = "# Gerado pelo forge. Registra as respostas usadas para criar o projeto.\n"

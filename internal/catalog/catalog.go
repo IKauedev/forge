@@ -11,7 +11,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	data "github.com/ikauedeveloper/forge/catalog"
+	data "github.com/ikauedev/forge/catalog"
 )
 
 // None é o valor da opção db que dispensa banco.
@@ -42,10 +42,11 @@ type Database struct {
 	DataDir     string `yaml:"data_dir"`
 	Healthcheck string `yaml:"healthcheck"`
 	AWS         struct {
-		Engine  string `yaml:"engine"`
-		Version string `yaml:"version"`
-		Family  string `yaml:"family"`
-		Port    int    `yaml:"port"`
+		Engine     string   `yaml:"engine"`
+		Version    string   `yaml:"version"`
+		Family     string   `yaml:"family"`
+		Port       int      `yaml:"port"`
+		LogExports []string `yaml:"log_exports"`
 	} `yaml:"aws"`
 }
 
@@ -167,7 +168,7 @@ func (c *Catalog) Migrations(name string) (map[string][]byte, error) {
 func (d Database) Slots() (map[string]string, error) {
 	out := map[string]string{}
 	for name, tpl := range slotTemplates {
-		t, err := template.New(name).Delims("[[", "]]").Parse(tpl)
+		t, err := template.New(name).Delims("[[", "]]").Funcs(funcs).Parse(tpl)
 		if err != nil {
 			return nil, fmt.Errorf("slot %s: %w", name, err)
 		}

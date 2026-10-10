@@ -1,0 +1,5 @@
+aws_region        = "us-east-1"
+github_repository = "minha-org/slim-service"
+
+# false se a conta já tem o provedor OIDC do GitHub (só pode haver um)
+create_oidc_provider = true
