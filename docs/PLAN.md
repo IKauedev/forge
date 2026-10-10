@@ -415,6 +415,14 @@ Pipeline e Terraform reaproveitam os módulos das Fases 4 e 5. Integra com `forg
 - Limite conhecido: o repositório é privado e ainda não há release, então `forge update` responde "nenhuma release
   encontrada" até a `v1.0.0` sair.
 
+## 5.2 Login nos frontends (OIDC com PKCE)
+
+- `angular-app` e `react-app` fazem **Authorization Code + PKCE** sem biblioteca: `oidc.ts` puro (descoberta, `state`, `code_verifier`/S256, troca do code, logout), `/auth/callback` público, token com validade (vencido conta como ausente), 401 refaz o login e botão Sair. `returnUrl` só aceita caminhos da própria app (sem redirecionamento aberto) e a tentativa de login é de uso único.
+- `config.json` passou de `loginUrl` para `issuer`, `clientId` e `scope`; deploy e container leem `AUTH_ISSUER`, `AUTH_CLIENT_ID` e `AUTH_SCOPE`, e o deploy recusa `AUTH_ENABLED=true` sem os dois primeiros.
+- **Bug encontrado no `angular-app` e corrigido**: o `authInterceptor` chamava `config()` em toda requisição, inclusive na que carrega o próprio `config.json` no bootstrap, quando a configuração ainda não existe; o app não subia no navegador e os testes (com `ConfigService` falso) não percebiam. Agora usa `ConfigService.current()` e `bootstrap.spec.ts` carrega o `config.json` pelos interceptors reais (falha com o código antigo, passa com o novo).
+- Validado em navegador real (Chrome) com os dois apps em containers e um IdP OIDC falso que confere o PKCE no servidor: login, volta por `/auth/callback`, página protegida, logout. Testes: 40 (Angular) e 43 (React).
+- Fora do escopo: criar o user pool/app client no provedor (documentado no README do projeto gerado) e refresh token (sessão vencida refaz o login).
+
 ## 6. Backlog pós-v1.0
 
 - MongoDB como segundo "perfil de persistência" (sem Flyway, Spring Data MongoDB, DocumentDB com aviso de compatibilidade parcial).

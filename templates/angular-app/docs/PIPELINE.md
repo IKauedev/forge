@@ -16,12 +16,14 @@ Autenticação com a AWS por OIDC (role criada em `infra/bootstrap`); não há a
 
 Crie os Environments `dev` e `prod` (em `prod`, ative _Required reviewers_) e, em cada um, as variáveis:
 
-| Variável                     | Origem / uso                                      |
-| ---------------------------- | ------------------------------------------------- |
-| `AWS_REGION`                 | região do bucket                                  |
-| `AWS_ROLE_ARN`               | saída `deploy_role_arns` do bootstrap             |
-| `S3_BUCKET`                  | saída `bucket_name` de `infra/envs/<env>`         |
-| `CLOUDFRONT_DISTRIBUTION_ID` | saída `distribution_id` de `infra/envs/<env>`     |
-| `API_BASE_URL`               | URL da API do ambiente (vai para o `config.json`) |
-| `AUTH_ENABLED`               | opcional, `true` ou `false` (padrão `false`)      |
-| `AUTH_LOGIN_URL`             | opcional (padrão `/login`)                        |
+| Variável                     | Origem / uso                                                       |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `AWS_REGION`                 | região do bucket                                                   |
+| `AWS_ROLE_ARN`               | saída `deploy_role_arns` do bootstrap                              |
+| `S3_BUCKET`                  | saída `bucket_name` de `infra/envs/<env>`                          |
+| `CLOUDFRONT_DISTRIBUTION_ID` | saída `distribution_id` de `infra/envs/<env>`                      |
+| `API_BASE_URL`               | URL da API do ambiente (vai para o `config.json`)                  |
+| `AUTH_ENABLED`               | opcional, `true` ou `false` (padrão `false`)                       |
+| `AUTH_ISSUER`                | emissor OIDC (obrigatório com `AUTH_ENABLED=true`)                 |
+| `AUTH_CLIENT_ID`             | client ID do app no provedor (obrigatório com `AUTH_ENABLED=true`) |
+| `AUTH_SCOPE`                 | opcional (padrão `openid profile email`)                           |

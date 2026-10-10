@@ -9,7 +9,9 @@ if [ -n "${API_BASE_URL:-}" ]; then
   "apiBaseUrl": "${API_BASE_URL}",
   "auth": {
     "enabled": ${AUTH_ENABLED:-false},
-    "loginUrl": "${AUTH_LOGIN_URL:-/login}"
+    "issuer": "${AUTH_ISSUER:-}",
+    "clientId": "${AUTH_CLIENT_ID:-}",
+    "scope": "${AUTH_SCOPE:-openid profile email}"
   }
 }
 EOF

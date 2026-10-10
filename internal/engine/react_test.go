@@ -151,3 +151,42 @@ func TestFrontendsIgnoreForgeYamlInPrettier(t *testing.T) {
 		}
 	}
 }
+
+// O login é OIDC (PKCE): o config.json, o deploy e o container precisam falar as mesmas variáveis.
+func TestFrontendsShareTheOidcConfigContract(t *testing.T) {
+	routes := map[string]string{
+		templates.AngularApp: "src/app/app.routes.ts",
+		templates.ReactApp:   "src/routes.tsx",
+	}
+	for _, tpl := range []string{templates.AngularApp, templates.ReactApp} {
+		t.Run(tpl, func(t *testing.T) {
+			dest, _ := genFrontend(t, tpl, "Store Front")
+			cfg := readFile(t, dest, "public/config.json")
+			for _, want := range []string{`"issuer"`, `"clientId"`, `"scope"`} {
+				if !strings.Contains(cfg, want) {
+					t.Errorf("config.json sem %s", want)
+				}
+			}
+			for _, rel := range []string{"public/config.json", ".github/workflows/deploy-env.yml", "docker/40-config.sh", "docs/PIPELINE.md", "README.md", "compose.yaml"} {
+				text := readFile(t, dest, rel)
+				if strings.Contains(text, "loginUrl") || strings.Contains(text, "AUTH_LOGIN_URL") {
+					t.Errorf("%s: sobrou o antigo loginUrl/AUTH_LOGIN_URL", rel)
+				}
+			}
+			for _, rel := range []string{".github/workflows/deploy-env.yml", "docker/40-config.sh", "docs/PIPELINE.md"} {
+				text := readFile(t, dest, rel)
+				for _, want := range []string{"AUTH_ISSUER", "AUTH_CLIENT_ID", "AUTH_SCOPE"} {
+					if !strings.Contains(text, want) {
+						t.Errorf("%s sem %s", rel, want)
+					}
+				}
+			}
+			if !strings.Contains(readFile(t, dest, routes[tpl]), "auth/callback") {
+				t.Errorf("%s sem a rota pública /auth/callback", routes[tpl])
+			}
+			if !strings.Contains(readFile(t, dest, "README.md"), "PKCE") {
+				t.Error("README sem a explicação do login com PKCE")
+			}
+		})
+	}
+}

@@ -11,9 +11,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse && error.status === 401) {
         auth.clear();
-        const { enabled, loginUrl } = config.config().auth;
-        if (enabled) {
-          window.location.assign(loginUrl);
+        // sessão vencida ou revogada: volta pelo provedor e depois para a mesma página
+        if (config.current()?.auth.enabled) {
+          auth.login().catch(() => undefined);
         }
       }
       return throwError(() => error);

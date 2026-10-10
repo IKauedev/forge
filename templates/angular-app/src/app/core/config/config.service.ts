@@ -9,6 +9,7 @@ export class ConfigService {
   private readonly http = inject(HttpClient);
   private readonly state = signal<AppConfig | null>(null);
 
+  /** Lança se a configuração ainda não foi carregada: use depois do bootstrap. */
   readonly config = computed(() => {
     const value = this.state();
     if (!value) {
@@ -16,6 +17,11 @@ export class ConfigService {
     }
     return value;
   });
+
+  /** A configuração, ou null enquanto não carregou. Os interceptors usam esta: a própria requisição do config.json passa por eles. */
+  current(): AppConfig | null {
+    return this.state();
+  }
 
   async load(): Promise<void> {
     this.state.set(await firstValueFrom(this.http.get<AppConfig>('config.json')));

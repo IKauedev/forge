@@ -23,7 +23,7 @@ describe('ConfigService', () => {
     const loading = service.load();
     http.expectOne('config.json').flush({
       apiBaseUrl: 'https://api.example.com',
-      auth: { enabled: true, loginUrl: '/login' },
+      auth: { enabled: true, issuer: 'https://idp.example.com', clientId: 'c', scope: 'openid' },
     });
     await loading;
 
