@@ -1,0 +1,58 @@
+# Manifesto do template. Lido pelo forge; nunca é copiado para o projeto gerado.
+#
+# O template COMPILA sozinho no estado de "reference". Variações usam diretivas em comentários
+# (forge:if / forge:else / forge:end) e ramos alternativos comentados com "~" (//~, #~, <!--~ -->).
+name: quarkus-api
+description: API Quarkus 3.40 LTS hexagonal com Java 25, Panache, Flyway, Fault Tolerance, Dev Services e ArchUnit
+
+sentinel: starter-api
+java_package: true
+
+next_steps:
+  - ./mvnw quarkus:dev    # live reload; o Dev Services sobe o banco (precisa de Docker)
+  - ./mvnw verify         # testes, Spotless e ArchUnit
+  - forge doctor          # confere o ambiente
+
+options:
+  - name: db
+    description: Banco de dados (valores do catálogo; none = sem persistência)
+    values: [none]
+    extend_with_catalog: true
+    default: postgres
+  - name: vpc
+    description: Rede da infra Terraform (new = cria a VPC; existing = usa uma VPC que você já tem)
+    values: [new, existing]
+    default: new
+  - name: auth
+    description: Autenticação (jwt = JWT verificado pelo JWKS do emissor; none = sem segurança)
+    values: [none, jwt]
+    default: jwt
+
+# Estado em que o template de referência compila e é testado sem passar pelo forge.
+reference:
+  db: postgres
+  vpc: new
+  auth: jwt
+
+remove:
+  - when: db=none
+    paths:
+      - compose.yaml
+      - src/main/resources/db/
+      - src/main/java/com/example/starterapi/adapter/out/persistence/
+      - src/test/java/com/example/starterapi/adapter/out/persistence/
+      - infra/modules/database/
+  - when: db!=none
+    paths:
+      - src/main/java/com/example/starterapi/config/NoOpAddressRepository.java
+  - when: vpc=existing
+    paths:
+      - infra/modules/network/
+  - when: auth=none
+    paths:
+      - src/main/java/com/example/starterapi/adapter/in/web/MeResource.java
+      - src/main/java/com/example/starterapi/adapter/in/web/AdminResource.java
+      - src/main/java/com/example/starterapi/adapter/in/web/DevTokenResource.java
+      - src/main/java/com/example/starterapi/shared/security/
+      - src/test/java/com/example/starterapi/adapter/in/web/SecurityEndpointsTest.java
+      - src/test/java/com/example/starterapi/adapter/in/web/DevTokenResourceTest.java

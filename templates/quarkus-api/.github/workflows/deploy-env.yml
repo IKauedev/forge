@@ -1,0 +1,76 @@
+name: Deploy de um ambiente
+
+# Workflow reutilizável: troca a imagem da task definition atual do ECS e implanta.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Environment do GitHub (dev ou prod)
+        type: string
+        required: true
+      image:
+        description: Imagem completa no ECR (registro/repositório:tag)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # OIDC
+
+jobs:
+  deploy:
+    name: ECS ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: ${{ inputs.environment }}
+    env:
+      # Convenção de nomes compartilhada com a infra Terraform: <app>-<ambiente>.
+      # Cada valor pode ser sobrescrito por uma variável do Environment.
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER || format('{0}-{1}', 'starter-api', inputs.environment) }}
+      ECS_SERVICE: ${{ vars.ECS_SERVICE || format('{0}-{1}', 'starter-api', inputs.environment) }}
+      ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY || format('{0}-{1}', 'starter-api', inputs.environment) }}
+      CONTAINER_NAME: starter-api
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: deploy-${{ inputs.environment }}-${{ github.run_id }}
+
+      # A task definition inicial é criada pela infra (Terraform). Aqui só trocamos a imagem.
+      - name: Baixar a task definition atual
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "$ECS_TASK_FAMILY" \
+            --query taskDefinition > task-definition.json \
+            || { echo "::error::Task definition '$ECS_TASK_FAMILY' não encontrada. Aplique a infra (infra/) antes do primeiro deploy."; exit 1; }
+
+      - name: Trocar a imagem
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@8d79160660ad39c402a16e5fc7cd2a32e8f7d6b7 # v1.9.1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ inputs.image }}
+
+      - name: Deploy no ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@a00d4d57ac0de1a99b39fe469f3d898d38717c2b # v2.6.4
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE }}
+          wait-for-service-stability: true
+          wait-for-minutes: 15
+
+      - name: Resumo
+        env:
+          IMAGE: ${{ inputs.image }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          {
+            echo "### Deploy em ${ENVIRONMENT}"
+            echo ""
+            echo "- Cluster: \`${ECS_CLUSTER}\`"
+            echo "- Serviço: \`${ECS_SERVICE}\`"
+            echo "- Imagem: \`${IMAGE}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

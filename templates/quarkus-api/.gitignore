@@ -1,0 +1,7 @@
+target/
+.env
+.idea/
+*.iml
+.vscode/
+.quarkus/
+dependency-reduced-pom.xml

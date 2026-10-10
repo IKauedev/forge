@@ -1,0 +1,35 @@
+# Somente infraestrutura, para quem prefere um banco fixo no lugar do Dev Services do Quarkus
+# (make dev já sobe um banco descartável sozinho). A aplicação roda no host ou via compose.full.yaml.
+name: starter-api
+
+services:
+  # forge:slot db-compose-service
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-starter_api}
+      POSTGRES_USER: ${DB_USER:-starter_api}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-starter_api}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+  # forge:end
+
+  adminer:
+    image: adminer:5
+    profiles: ["tools"]
+    ports:
+      - "8081:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

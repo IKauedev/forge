@@ -1,0 +1,33 @@
+# Configuração do checkov (docker run -v "$PWD:/tf" bridgecrew/checkov --config-file /tf/.checkov.yaml).
+# Os controles abaixo são recomendações opcionais que custam dinheiro ou dependem de decisões da sua
+# organização; foram deixados de fora de propósito. Revise cada um antes de ir para produção.
+framework:
+  - terraform
+directory:
+  - .
+quiet: true
+compact: true
+download-external-modules: false
+skip-check:
+  # ALB: HTTP é permitido quando não há certificate_arn (dev). Em prod o certificado é obrigatório e a porta 80 só redireciona.
+  - CKV_AWS_2
+  - CKV_AWS_378
+  - CKV_AWS_260
+  # ALB: WAF e access logs exigem WAF/bucket dedicados; adicione se o seu risco pedir.
+  - CKV2_AWS_28
+  - CKV_AWS_91
+  # Criptografia em repouso já ativa com chaves gerenciadas pela AWS (SSE-S3, AES256, padrão do CloudWatch). KMS próprio é opcional.
+  - CKV_AWS_145
+  - CKV_AWS_136
+  - CKV_AWS_158
+  # Bucket de state: logs de acesso, replicação entre regiões e notificações são decisões de governança da organização.
+  - CKV_AWS_18
+  - CKV_AWS_144
+  - CKV2_AWS_62
+  # RDS: monitoramento avançado e Performance Insights dependem da classe da instância e geram custo; habilite por ambiente.
+  - CKV_AWS_118
+  - CKV_AWS_353
+  # Zonas: o módulo usa as primeiras az_count zonas (ordem alfabética, sem Local Zones); zonas novas da AWS não alteram essa seleção.
+  - CKV_AWS_394
+  # VPC: flow logs geram custo de ingestão; habilite se precisar de auditoria de rede.
+  - CKV2_AWS_11

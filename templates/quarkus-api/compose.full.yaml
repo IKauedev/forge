@@ -1,0 +1,30 @@
+# Uso: docker compose -f compose.yaml -f compose.full.yaml up --build
+services:
+  app:
+    build: .
+    image: starter-api:local
+    # forge:if db!=none
+    depends_on:
+      db:
+        condition: service_healthy
+    # forge:end
+    environment:
+      QUARKUS_PROFILE: prod
+      # forge:if db!=none
+      # forge:slot db-full-url
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-starter_api}
+      # forge:end
+      DB_USERNAME: ${DB_USER:-starter_api}
+      DB_PASSWORD: ${DB_PASSWORD:-starter_api}
+      # forge:end
+      # forge:if auth!=none
+      JWT_ISSUER_URI: ${JWT_ISSUER_URI:-https://issuer.example.invalid}
+      # forge:end
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/q/health/ready | grep -q UP"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
