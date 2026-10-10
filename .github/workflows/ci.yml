@@ -1,0 +1,210 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1' # segunda, 06:00 UTC: pega quebras por versões novas de dependências
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Go (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test -timeout 20m ./...
+
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
+
+  # Os templates de referência precisam compilar e passar nos testes sozinhos.
+  template-spring:
+    name: Template spring-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - run: ./mvnw -q verify
+        working-directory: templates/spring-api
+
+  template-quarkus:
+    name: Template quarkus-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - run: ./mvnw -q verify
+        working-directory: templates/quarkus-api
+
+  template-angular:
+    name: Template angular-app
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: templates/angular-app/package-lock.json
+
+      - working-directory: templates/angular-app
+        run: |
+          npm ci
+          npm run lint
+          npm test -- --watch=false
+          npm run build
+
+  template-react:
+    name: Template react-app
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: templates/react-app/package-lock.json
+
+      - working-directory: templates/react-app
+        run: |
+          npm ci
+          npm run lint
+          npm run format:check
+          npm test
+          npm run build
+
+  # Gera projetos de verdade e valida o que saiu: workflows, Terraform e o build do Angular.
+  smoke-generated:
+    name: Projetos gerados
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+
+      - name: Gerar os projetos
+        run: |
+          go build -o "$RUNNER_TEMP/forge" ./cmd/forge
+          mkdir -p "$RUNNER_TEMP/gen"
+          "$RUNNER_TEMP/forge" new payments-api --yes --out "$RUNNER_TEMP/gen"
+          "$RUNNER_TEMP/forge" new payments-slim --yes --db none --auth none --vpc existing --out "$RUNNER_TEMP/gen"
+          "$RUNNER_TEMP/forge" new store-front --type angular-app --out "$RUNNER_TEMP/gen"
+          "$RUNNER_TEMP/forge" new web-shop --type react-app --out "$RUNNER_TEMP/gen"
+          "$RUNNER_TEMP/forge" new orders-quarkus --type quarkus-api --out "$RUNNER_TEMP/gen"
+          "$RUNNER_TEMP/forge" new orders-slim --type quarkus-api --db none --auth none --vpc existing --out "$RUNNER_TEMP/gen"
+
+      - name: actionlint nos workflows gerados
+        run: |
+          for p in payments-api payments-slim store-front web-shop orders-quarkus orders-slim; do
+            docker run --rm -v "$RUNNER_TEMP/gen/$p:/repo" -w /repo rhysd/actionlint:1.7.12
+          done
+
+      - name: Terraform dos projetos gerados
+        run: |
+          for p in payments-api payments-slim store-front web-shop orders-quarkus orders-slim; do
+            (cd "$RUNNER_TEMP/gen/$p/infra" && terraform fmt -check -recursive)
+            for d in bootstrap envs/dev envs/prod; do
+              (cd "$RUNNER_TEMP/gen/$p/infra/$d" && terraform init -backend=false -input=false >/dev/null && terraform validate)
+            done
+          done
+
+      - name: Build do Angular gerado
+        working-directory: ${{ runner.temp }}/gen/store-front
+        run: |
+          npm ci
+          npm run lint
+          npm run format:check
+          npm test -- --watch=false
+          npm run build
+
+      - name: Build do React gerado
+        working-directory: ${{ runner.temp }}/gen/web-shop
+        run: |
+          npm ci
+          npm run lint
+          npm run format:check
+          npm test
+          npm run build
+
+  # Pesado (JDK 25 + Docker): gera a matriz de combinações do Spring, sobe o banco e roda mvnw verify.
+  smoke-spring:
+    name: Smoke spring-api (matriz)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - run: go test -tags smoke -timeout 140m -run "TestSmoke(Verify|Quarkus)" ./internal/engine

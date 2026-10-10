@@ -1,0 +1,69 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: forge
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./internal/cli ./internal/upgrade
+
+builds:
+  - id: forge
+    main: ./cmd/forge
+    binary: forge
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/ikauedev/forge/internal/cli.Version={{ .Version }}
+
+archives:
+  - id: forge
+    formats: [tar.gz]
+    name_template: "forge_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  draft: false
+  prerelease: auto
+
+# Homebrew tap: exige o repositório ikauedev/homebrew-tap e o secret HOMEBREW_TAP_TOKEN
+# (token com acesso de escrita a esse repositório). Sem o token o release publica só os binários.
+homebrew_casks:
+  - name: forge
+    binaries: [forge]
+    repository:
+      owner: ikauedev
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/ikauedev/forge
+    description: Gera projetos Spring Boot e Angular pré-configurados
+    skip_upload: auto
+    # O binário não é assinado/notarizado: remove a quarentena do macOS na instalação.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/forge"]
+          end

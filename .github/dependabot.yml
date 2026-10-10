@@ -1,0 +1,81 @@
+version: 2
+
+# Cobre o próprio forge e as dependências dos templates (que viram as dos projetos gerados).
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(deps)'
+
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /templates/spring-api
+      - /templates/quarkus-api
+      - /templates/angular-app
+      - /templates/react-app
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(deps)'
+
+  - package-ecosystem: maven
+    directories:
+      - /templates/spring-api
+      - /templates/quarkus-api
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(deps)'
+
+  - package-ecosystem: npm
+    directories:
+      - /templates/angular-app
+      - /templates/react-app
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(deps)'
+
+  - package-ecosystem: docker
+    directories:
+      - /templates/spring-api
+      - /templates/quarkus-api
+      - /templates/angular-app
+      - /templates/react-app
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(deps)'
+
+  - package-ecosystem: docker-compose
+    directories:
+      - /templates/spring-api
+      - /templates/quarkus-api
+      - /templates/angular-app
+      - /templates/react-app
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(deps)'
+
+  - package-ecosystem: terraform
+    directories:
+      - /templates/spring-api/infra/bootstrap
+      - /templates/spring-api/infra/envs/dev
+      - /templates/spring-api/infra/envs/prod
+      - /templates/quarkus-api/infra/bootstrap
+      - /templates/quarkus-api/infra/envs/dev
+      - /templates/quarkus-api/infra/envs/prod
+      - /templates/angular-app/infra/bootstrap
+      - /templates/angular-app/infra/envs/dev
+      - /templates/angular-app/infra/envs/prod
+      - /templates/react-app/infra/bootstrap
+      - /templates/react-app/infra/envs/dev
+      - /templates/react-app/infra/envs/prod
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(deps)'
