@@ -29,15 +29,40 @@ antes de a aplicação iniciar. O mesmo build serve qualquer ambiente: o deploy 
 ```json
 {
   "apiBaseUrl": "http://localhost:8080/api",
-  "auth": { "enabled": false, "loginUrl": "/login", "rolesClaim": "roles" }
+  "auth": {
+    "enabled": false,
+    "issuer": "",
+    "clientId": "",
+    "scope": "openid profile email",
+    "rolesClaim": "roles"
+  }
 }
 ```
 
 ## Autenticação e guards por role
 
-Com `auth.enabled = true`, as rotas protegidas exigem um token. Depois do login no seu provedor, chame
-`tokenStore.set(accessToken)`. As roles vêm do claim `auth.rolesClaim` do JWT (`roles` por padrão;
-`cognito:groups` no Cognito), em maiúsculas e sem `ROLE_`, como o backend as enxerga.
+### Login (OIDC com PKCE)
+
+Com `auth.enabled = true`, as rotas protegidas levam o usuário ao seu provedor de identidade
+(**Authorization Code + PKCE**, sem biblioteca; funciona com Cognito, Keycloak, Auth0, Entra ID...). O fluxo:
+`RequireAuth` → `login()` (descoberta em `<issuer>/.well-known/openid-configuration`, `state` e `code_verifier`
+no `sessionStorage`) → provedor → `/auth/callback` (`AuthCallback`) troca o `code` pelos tokens e volta para a
+página de origem. O botão **Sair** (`logout()`) limpa a sessão e usa o `end_session_endpoint`, se o provedor tiver.
+Um 401 da API limpa o token e refaz o login; um token vencido conta como não autenticado.
+
+Configure no provedor um app **público** (sem client secret) com:
+
+- Callback URL: `https://<seu-site>/auth/callback` (e `http://localhost:4200/auth/callback` para desenvolver);
+- Sign-out URL: a raiz do site;
+- escopos `openid profile email` (ajuste em `auth.scope`).
+
+No `config.json`: `issuer` (ex.: `https://cognito-idp.<regiao>.amazonaws.com/<user-pool-id>`) e `clientId`. O
+backend deve aceitar o **access token** desse emissor (no `spring-api`/`quarkus-api`, `JWT_ISSUER_URI`).
+
+### Roles
+
+As roles vêm do claim `auth.rolesClaim` do JWT (`roles` por padrão; `cognito:groups` no Cognito), em maiúsculas e
+sem `ROLE_`, como o backend as enxerga.
 
 | Guard                         | Anotação do backend (spring-api) |
 | ----------------------------- | -------------------------------- |
@@ -56,7 +81,7 @@ docker compose up --build   # http://localhost:4200
 ```
 
 A imagem (Nginx sem privilégios, porta 8080) gera o `config.json` a partir de `API_BASE_URL`, `AUTH_ENABLED`,
-`AUTH_LOGIN_URL` e `AUTH_ROLES_CLAIM`.
+`AUTH_ISSUER`, `AUTH_CLIENT_ID`, `AUTH_SCOPE` e `AUTH_ROLES_CLAIM`.
 
 ## Deploy e infraestrutura
 

@@ -25,7 +25,9 @@ jobs:
       CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
       API_BASE_URL: ${{ vars.API_BASE_URL }}
       AUTH_ENABLED: ${{ vars.AUTH_ENABLED || 'false' }}
-      AUTH_LOGIN_URL: ${{ vars.AUTH_LOGIN_URL || '/login' }}
+      AUTH_ISSUER: ${{ vars.AUTH_ISSUER }}
+      AUTH_CLIENT_ID: ${{ vars.AUTH_CLIENT_ID }}
+      AUTH_SCOPE: ${{ vars.AUTH_SCOPE || 'openid profile email' }}
       AUTH_ROLES_CLAIM: ${{ vars.AUTH_ROLES_CLAIM || 'roles' }}
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -42,12 +44,18 @@ jobs:
       - name: Gerar o config.json do ambiente
         run: |
           : "${API_BASE_URL:?Defina a variável API_BASE_URL no Environment}"
+          if [ "$AUTH_ENABLED" = "true" ]; then
+            : "${AUTH_ISSUER:?Com AUTH_ENABLED=true defina AUTH_ISSUER no Environment}"
+            : "${AUTH_CLIENT_ID:?Com AUTH_ENABLED=true defina AUTH_CLIENT_ID no Environment}"
+          fi
           jq -n \
             --arg api "$API_BASE_URL" \
             --argjson enabled "$AUTH_ENABLED" \
-            --arg login "$AUTH_LOGIN_URL" \
+            --arg issuer "$AUTH_ISSUER" \
+            --arg client "$AUTH_CLIENT_ID" \
+            --arg scope "$AUTH_SCOPE" \
             --arg roles "$AUTH_ROLES_CLAIM" \
-            '{apiBaseUrl: $api, auth: {enabled: $enabled, loginUrl: $login, rolesClaim: $roles}}' > site/config.json
+            '{apiBaseUrl: $api, auth: {enabled: $enabled, issuer: $issuer, clientId: $client, scope: $scope, rolesClaim: $roles}}' > site/config.json
           cat site/config.json
 
       # Arquivos com hash no nome nunca mudam de conteúdo: cache imutável por um ano.

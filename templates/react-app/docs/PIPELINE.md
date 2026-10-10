@@ -24,5 +24,7 @@ Crie os Environments `dev` e `prod` (em `prod`, ative _Required reviewers_) e, e
 | `CLOUDFRONT_DISTRIBUTION_ID` | saída `distribution_id` de `infra/envs/<env>`                                      |
 | `API_BASE_URL`               | URL da API do ambiente (vai para o `config.json`)                                  |
 | `AUTH_ENABLED`               | opcional, `true` ou `false` (padrão `false`)                                       |
-| `AUTH_LOGIN_URL`             | opcional (padrão `/login`)                                                         |
+| `AUTH_ISSUER`                | emissor OIDC (obrigatório com `AUTH_ENABLED=true`)                                 |
+| `AUTH_CLIENT_ID`             | client ID do app no provedor (obrigatório com `AUTH_ENABLED=true`)                 |
+| `AUTH_SCOPE`                 | opcional (padrão `openid profile email`)                                           |
 | `AUTH_ROLES_CLAIM`           | opcional: claim do JWT com as roles (padrão `roles`; no Cognito, `cognito:groups`) |

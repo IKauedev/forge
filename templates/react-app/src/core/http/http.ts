@@ -1,3 +1,4 @@
+import { login } from '../auth/login';
 import { tokenStore } from '../auth/token-store';
 import { getConfig } from '../config/config';
 
@@ -17,7 +18,7 @@ export class ApiError extends Error {
 
 /**
  * Chamada à API configurada: acrescenta o id de correlação e o Bearer token, limpa o token e leva
- * ao login em 401 (se a autenticação estiver ligada) e transforma erros HTTP em ApiError.
+ * ao login do provedor em 401 (se a autenticação estiver ligada) e transforma erros HTTP em ApiError.
  */
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { apiBaseUrl, auth } = getConfig();
@@ -34,7 +35,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 
   if (response.status === 401) {
     tokenStore.clear();
-    if (auth.enabled) window.location.assign(auth.loginUrl);
+    // sessão vencida ou revogada: volta pelo provedor e depois para a mesma página
+    if (auth.enabled) login().catch(() => undefined);
   }
   throw new ApiError(response.status, await response.json().catch(() => null));
 }

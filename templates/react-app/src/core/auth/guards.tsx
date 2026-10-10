@@ -1,5 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
-import { getConfig } from '../config/config';
+import { useEffect, useState, type ReactNode } from 'react';
+import { login } from './login';
 import { useAuth } from './use-auth';
 
 interface GuardProps {
@@ -10,15 +10,19 @@ function Forbidden() {
   return <p role="alert">Você não tem permissão para acessar esta página.</p>;
 }
 
-/** Espelha @IsAuthenticated: exige usuário autenticado; senão leva para o login. */
+/** Espelha @IsAuthenticated: exige usuário autenticado; senão leva ao login do provedor. */
 export function RequireAuth({ children }: GuardProps) {
   const { enabled, authenticated } = useAuth();
   const blocked = enabled && !authenticated;
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (blocked) window.location.assign(getConfig().auth.loginUrl);
+    if (blocked) {
+      login().catch((e: unknown) => setError(e instanceof Error ? e.message : 'Falha ao entrar.'));
+    }
   }, [blocked]);
 
+  if (error) return <p role="alert">{error}</p>;
   return blocked ? null : children;
 }
 

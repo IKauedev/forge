@@ -2,7 +2,11 @@ export interface AppConfig {
   apiBaseUrl: string;
   auth: {
     enabled: boolean;
-    loginUrl: string;
+    /** Emissor OIDC (ex.: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abc). */
+    issuer: string;
+    /** Client ID do app (público, sem secret) cadastrado no provedor. */
+    clientId: string;
+    scope: string;
     /** Claim do JWT com as roles: "roles" (padrão do backend) ou "cognito:groups". */
     rolesClaim: string;
   };
