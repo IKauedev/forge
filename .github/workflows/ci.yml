@@ -175,9 +175,16 @@ jobs:
           done
 
       - name: tflint e checkov nos projetos gerados
+        env:
+          # O tflint baixa o ruleset da AWS pela API do GitHub: sem token o IP compartilhado do runner
+          # estoura o rate limit. O diretório de plugins é reaproveitado entre os projetos.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          mkdir -p "$RUNNER_TEMP/tflint-plugins"
           for p in payments-api payments-slim store-front web-shop orders-quarkus orders-slim; do
-            docker run --rm -v "$RUNNER_TEMP/gen/$p/infra:/data" -w /data --entrypoint /bin/sh \
+            docker run --rm -e GITHUB_TOKEN -e TFLINT_PLUGIN_DIR=/plugins \
+              -v "$RUNNER_TEMP/tflint-plugins:/plugins" \
+              -v "$RUNNER_TEMP/gen/$p/infra:/data" -w /data --entrypoint /bin/sh \
               ghcr.io/terraform-linters/tflint:v0.64.0 \
               -c 'tflint --init >/dev/null && tflint --recursive --config=/data/.tflint.hcl'
             docker run --rm -v "$RUNNER_TEMP/gen/$p/infra:/tf" -w /tf \
