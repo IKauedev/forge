@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+*.local
+*.tsbuildinfo
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+backend.hcl
+terraform.tfvars

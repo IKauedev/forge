@@ -1,0 +1,8 @@
+{
+  "apiBaseUrl": "http://localhost:8080/api",
+  "auth": {
+    "enabled": false,
+    "loginUrl": "/login",
+    "rolesClaim": "roles"
+  }
+}

@@ -1,0 +1,86 @@
+name: Deploy de um ambiente
+
+# Workflow reutilizável: gera o config.json do ambiente, sincroniza o build com o S3 e invalida o CloudFront.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Environment do GitHub (dev ou prod)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # OIDC
+
+jobs:
+  deploy:
+    name: S3 + CloudFront ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ inputs.environment }}
+    env:
+      # Variáveis do Environment (veja docs/PIPELINE.md). Nenhum valor aqui é segredo.
+      S3_BUCKET: ${{ vars.S3_BUCKET }}
+      CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+      AUTH_ENABLED: ${{ vars.AUTH_ENABLED || 'false' }}
+      AUTH_LOGIN_URL: ${{ vars.AUTH_LOGIN_URL || '/login' }}
+      AUTH_ROLES_CLAIM: ${{ vars.AUTH_ROLES_CLAIM || 'roles' }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+          path: site
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: deploy-${{ inputs.environment }}-${{ github.run_id }}
+
+      - name: Gerar o config.json do ambiente
+        run: |
+          : "${API_BASE_URL:?Defina a variável API_BASE_URL no Environment}"
+          jq -n \
+            --arg api "$API_BASE_URL" \
+            --argjson enabled "$AUTH_ENABLED" \
+            --arg login "$AUTH_LOGIN_URL" \
+            --arg roles "$AUTH_ROLES_CLAIM" \
+            '{apiBaseUrl: $api, auth: {enabled: $enabled, loginUrl: $login, rolesClaim: $roles}}' > site/config.json
+          cat site/config.json
+
+      # Arquivos com hash no nome nunca mudam de conteúdo: cache imutável por um ano.
+      - name: Publicar os assets com hash
+        run: |
+          aws s3 sync site "s3://${S3_BUCKET}" --delete \
+            --exclude index.html --exclude config.json --exclude favicon.svg \
+            --cache-control "public,max-age=31536000,immutable"
+
+      # index.html e config.json mudam a cada deploy: sempre revalidados. O index.html vai por último,
+      # para só apontar para assets que já estão no bucket.
+      - name: Publicar index.html, config.json e favicon
+        run: |
+          aws s3 cp site/favicon.svg "s3://${S3_BUCKET}/favicon.svg" --cache-control "public,max-age=86400" --content-type image/svg+xml
+          aws s3 cp site/config.json "s3://${S3_BUCKET}/config.json" \
+            --cache-control "no-cache, no-store, must-revalidate" --content-type application/json
+          aws s3 cp site/index.html "s3://${S3_BUCKET}/index.html" \
+            --cache-control "no-cache, no-store, must-revalidate" --content-type "text/html; charset=utf-8"
+
+      - name: Invalidar o CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
+            --paths "/index.html" "/config.json" "/favicon.svg"
+
+      - name: Resumo
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          {
+            echo "### Deploy em ${ENVIRONMENT}"
+            echo ""
+            echo "- Bucket: \`${S3_BUCKET}\`"
+            echo "- Distribuição: \`${CLOUDFRONT_DISTRIBUTION_ID}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
