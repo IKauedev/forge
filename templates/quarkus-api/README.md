@@ -30,6 +30,9 @@ Copie `.env.example` para `.env` para trocar nome, usuário, senha e portas do `
 ## CI/CD
 Workflows em `.github/workflows/` (CI em PR; deploy na `main` para ECS via OIDC). Variáveis, Environments e roles
 da AWS: [docs/PIPELINE.md](docs/PIPELINE.md). Terraform: [docs/INFRA.md](docs/INFRA.md).
+<!-- forge:if k8s=kustomize -->
+Kubernetes (Kustomize, dev/hml/prd) e o pipeline `deploy-k8s.yml`: [docs/KUBERNETES.md](docs/KUBERNETES.md).
+<!-- forge:end -->
 
 ## Imagem Docker
 Build multi-stage com cache do Maven, fast-jar do Quarkus em camadas, JRE Alpine, usuário não-root,

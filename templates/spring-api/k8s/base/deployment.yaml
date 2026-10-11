@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starter-api
+  labels:
+    app.kubernetes.io/name: starter-api
+spec:
+  # Sem "replicas": quem manda é o HPA (hpa.yaml). Fixar aqui faria cada apply voltar para esse número.
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: starter-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: starter-api
+    spec:
+      serviceAccountName: starter-api
+      automountServiceAccountToken: false
+      # Maior que o spring.lifecycle.timeout-per-shutdown-phase (30s) + o preStop.
+      terminationGracePeriodSeconds: 50
+      securityContext:
+        runAsNonRoot: true
+        # A imagem usa um usuário por nome; o UID numérico é o que o kubelet consegue verificar.
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: starter-api
+      containers:
+        - name: starter-api
+          # O pipeline troca pela imagem do ECR com a tag do commit (kustomize "images").
+          image: starter-api
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: starter-api
+          # forge:if db!=none
+          env:
+            # DB_HOST vem do ConfigMap (muda por ambiente); o Kubernetes expande $(DB_HOST) abaixo.
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: starter-api
+                  key: DB_HOST
+            # forge:slot k8s-db-url
+            - name: DB_URL
+              value: jdbc:postgresql://$(DB_HOST):5432/starter_api
+            # forge:end
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: starter-api-db
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: starter-api-db
+                  key: password
+          # forge:end
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 768Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          # Dá tempo de a JVM subir sem a liveness matar o pod: 30 tentativas x 5s.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              # Deixa o Service/Ingress tirarem o pod da rotação antes de o SIGTERM chegar à aplicação.
+              exec:
+                command: ["sleep", "10"]
+      volumes:
+        - name: tmp
+          emptyDir: {}

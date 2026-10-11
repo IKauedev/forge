@@ -78,3 +78,21 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
           format: table
+  # forge:if k8s=kustomize
+
+  k8s-manifests:
+    name: Manifests Kubernetes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Falha se algum overlay deixar de renderizar (patch quebrado, recurso faltando, YAML inválido).
+      - name: Renderizar os overlays
+        run: |
+          for env in dev hml prd; do
+            echo "::group::${env}"
+            kubectl kustomize "k8s/overlays/${env}" > /dev/null
+            echo "::endgroup::"
+          done
+  # forge:end

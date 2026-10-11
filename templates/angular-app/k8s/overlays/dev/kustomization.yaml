@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Ambiente dev: 1 a 2 réplicas. Deploy automático a cada push na main.
+namespace: starter-app-dev
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/instance: starter-app-dev
+      environment: dev
+
+configMapGenerator:
+  - name: starter-app
+    behavior: merge
+    literals:
+      - API_BASE_URL=https://api.dev.example.com
+
+patches:
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: starter-app
+      spec:
+        minReplicas: 1
+        maxReplicas: 2
+  - target:
+      kind: Ingress
+      name: starter-app
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: starter-app.dev.example.com
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: starter-app.dev.example.com

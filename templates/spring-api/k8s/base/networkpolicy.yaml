@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: starter-api
+  labels:
+    app.kubernetes.io/name: starter-api
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: starter-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Só o ingress controller (namespace ingress-nginx) fala com a aplicação.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8080
+          protocol: TCP
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # HTTPS externo (ViaCEP, JWKS do emissor OIDC)
+    - ports:
+        - port: 443
+          protocol: TCP
+    # forge:if db!=none
+    # Banco de dados. Restrinja o destino com "to: ipBlock" (CIDR das subnets do banco) se quiser.
+    - ports:
+        # forge:slot k8s-db-port
+        - port: 5432
+          protocol: TCP
+        # forge:end
+    # forge:end
+    # forge:if cache=redis
+    #~ - ports:
+    #~     - port: 6379
+    #~       protocol: TCP
+    # forge:end

@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base compartilhada pelos três ambientes. O que muda por ambiente (réplicas, recursos, host, endereços)
+# fica em ../overlays/<ambiente>. A imagem não é fixada aqui: o pipeline a define no deploy.
+resources:
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
+
+# Variáveis não sensíveis. O nome ganha um hash do conteúdo: mudou a configuração, os pods são recriados.
+# Segredos NÃO entram aqui (veja docs/KUBERNETES.md).
+configMapGenerator:
+  - name: starter-api
+    literals:
+      - SPRING_PROFILES_ACTIVE=prod
+      # forge:if db!=none
+      - DB_HOST=CHANGE_ME
+      # forge:end
+      # forge:if auth!=none
+      - JWT_ISSUER_URI=https://issuer.example.invalid
+      # forge:end
+      # forge:if cache=redis
+      #~ - REDIS_HOST=CHANGE_ME
+      # forge:end

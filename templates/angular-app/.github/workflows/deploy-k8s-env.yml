@@ -1,0 +1,67 @@
+name: Deploy Kubernetes de um ambiente
+
+# Workflow reutilizável: define a imagem no overlay do ambiente, aplica com kustomize e espera o rollout.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Environment do GitHub (dev, hml ou prd)
+        type: string
+        required: true
+      image:
+        description: Imagem completa no ECR (registro/repositório:tag)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # OIDC
+
+jobs:
+  deploy:
+    name: EKS ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+      IMAGE: ${{ inputs.image }}
+      APP_NAME: starter-app
+      # Convenção de nomes: cluster <app>-<ambiente> (pode ser sobrescrito pela variável EKS_CLUSTER do
+      # Environment) e namespace <app>-<ambiente>, o mesmo declarado em k8s/overlays/<ambiente>.
+      EKS_CLUSTER: ${{ vars.EKS_CLUSTER || format('{0}-{1}', 'starter-app', inputs.environment) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: deploy-k8s-${{ inputs.environment }}-${{ github.run_id }}
+
+      # A role precisa estar mapeada no cluster (access entry do EKS); veja docs/KUBERNETES.md.
+      - name: Configurar o kubectl
+        run: aws eks update-kubeconfig --name "$EKS_CLUSTER" --region "$AWS_REGION"
+
+      # O overlay não fixa imagem: acrescentamos aqui o bloco "images" com a tag deste commit.
+      - name: Definir a imagem
+        working-directory: k8s/overlays/${{ inputs.environment }}
+        run: |
+          printf '\nimages:\n  - name: %s\n    newName: %s\n    newTag: %s\n' \
+            "$APP_NAME" "${IMAGE%:*}" "${IMAGE##*:}" >> kustomization.yaml
+
+      - name: Aplicar os manifests
+        run: kubectl apply -k "k8s/overlays/${ENVIRONMENT}"
+
+      - name: Aguardar o rollout
+        run: kubectl rollout status "deployment/${APP_NAME}" --namespace "${APP_NAME}-${ENVIRONMENT}" --timeout=10m
+
+      - name: Resumo
+        run: |
+          {
+            echo "### Deploy em ${ENVIRONMENT}"
+            echo ""
+            echo "- Cluster: \`${EKS_CLUSTER}\`"
+            echo "- Namespace: \`${APP_NAME}-${ENVIRONMENT}\`"
+            echo "- Imagem: \`${IMAGE}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

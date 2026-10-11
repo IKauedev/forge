@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: starter-app
+  labels:
+    app.kubernetes.io/name: starter-app
+spec:
+  # Drenar um nó nunca derruba mais de um pod por vez (com 1 réplica só, o drain espera o pod novo ficar pronto).
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: starter-app

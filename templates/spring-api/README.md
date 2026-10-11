@@ -36,6 +36,9 @@ para `.env` para trocar nome, usuário, senha e portas. Adminer:
 ## CI/CD
 Workflows em `.github/workflows/` (CI em PR; deploy na `main` para ECS via OIDC). Variáveis, Environments e roles
 da AWS: [docs/PIPELINE.md](docs/PIPELINE.md).
+<!-- forge:if k8s=kustomize -->
+Kubernetes (Kustomize, dev/hml/prd) e o pipeline `deploy-k8s.yml`: [docs/KUBERNETES.md](docs/KUBERNETES.md).
+<!-- forge:end -->
 
 ## Imagem Docker
 Build multi-stage com cache do Maven, jar extraído em camadas (`jarmode=tools`), JRE Alpine,

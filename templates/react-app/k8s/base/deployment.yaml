@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starter-app
+  labels:
+    app.kubernetes.io/name: starter-app
+spec:
+  # Sem "replicas": quem manda é o HPA (hpa.yaml). Fixar aqui faria cada apply voltar para esse número.
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: starter-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: starter-app
+    spec:
+      serviceAccountName: starter-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        # nginx-unprivileged roda como o UID 101.
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: starter-app
+      containers:
+        - name: starter-app
+          # O pipeline troca pela imagem do ECR com a tag do commit (kustomize "images").
+          image: starter-app
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          # A imagem é a mesma em todo ambiente: o entrypoint gera o config.json a partir destas variáveis.
+          envFrom:
+            - configMapRef:
+                name: starter-app
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            # O entrypoint grava o config.json em /usr/share/nginx/html, então o sistema de arquivos
+            # precisa ser gravável. O resto continua restrito (sem root, sem capabilities).
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: [ALL]
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 2
+            failureThreshold: 15
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              # Deixa o Service/Ingress tirarem o pod da rotação antes de o SIGTERM chegar ao nginx.
+              exec:
+                command: ["sleep", "5"]

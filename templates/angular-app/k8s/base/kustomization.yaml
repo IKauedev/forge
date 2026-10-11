@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base compartilhada pelos três ambientes. O que muda por ambiente (réplicas, host, API) fica em
+# ../overlays/<ambiente>. A imagem não é fixada aqui: o pipeline a define no deploy.
+resources:
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
+
+# Vira o config.json da aplicação em runtime (docker/40-config.sh). Nada aqui é segredo: o config.json é
+# público. O nome ganha um hash do conteúdo: mudou a configuração, os pods são recriados.
+configMapGenerator:
+  - name: starter-app
+    literals:
+      - API_BASE_URL=https://api.example.com
+      - AUTH_ENABLED=false
+      - AUTH_ISSUER=
+      - AUTH_CLIENT_ID=
+      - AUTH_SCOPE=openid profile email

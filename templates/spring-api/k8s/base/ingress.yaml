@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: starter-api
+  labels:
+    app.kubernetes.io/name: starter-api
+  # annotations:
+  #   cert-manager.io/cluster-issuer: letsencrypt   # se usar o cert-manager para emitir o certificado
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - starter-api.example.com
+      secretName: starter-api-tls
+  rules:
+    - host: starter-api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: starter-api
+                port:
+                  name: http

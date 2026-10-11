@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Ambiente prd (produção): mais réplicas e recursos. O deploy espera a aprovação do Environment "prd".
+namespace: starter-app-prd
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/instance: starter-app-prd
+      environment: prd
+
+configMapGenerator:
+  - name: starter-app
+    behavior: merge
+    literals:
+      - API_BASE_URL=https://api.example.com
+
+patches:
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: starter-app
+      spec:
+        minReplicas: 3
+        maxReplicas: 10
+  # O host de produção é o da base (starter-app.example.com); troque pelo seu domínio em base/ingress.yaml.

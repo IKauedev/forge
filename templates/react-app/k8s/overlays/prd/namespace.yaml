@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: starter-app-prd
+  labels:
+    # Pod Security "restricted": os pods do template já cumprem (não-root, sem privilégios, seccomp).
+    pod-security.kubernetes.io/enforce: restricted
