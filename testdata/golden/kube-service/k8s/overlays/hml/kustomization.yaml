@@ -1,0 +1,42 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Ambiente hml (homologação): espelha a produção em tamanho menor. Deploy depois do dev.
+namespace: kube-service-hml
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/instance: kube-service-hml
+      environment: hml
+
+configMapGenerator:
+  - name: kube-service
+    behavior: merge
+    literals:
+      - DB_HOST=kube-service-hml.db.example.internal
+      - JWT_ISSUER_URI=https://issuer.hml.example.invalid
+      - REDIS_HOST=kube-service-hml.cache.example.internal
+
+patches:
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: kube-service
+      spec:
+        minReplicas: 2
+        maxReplicas: 3
+  - target:
+      kind: Ingress
+      name: kube-service
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: kube-service.hml.example.com
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: kube-service.hml.example.com

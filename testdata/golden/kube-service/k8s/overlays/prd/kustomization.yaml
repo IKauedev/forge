@@ -1,0 +1,49 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Ambiente prd (produção): mais réplicas e recursos. O deploy espera a aprovação do Environment "prd".
+namespace: kube-service-prd
+
+resources:
+  - ../../base
+  - namespace.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/instance: kube-service-prd
+      environment: prd
+
+configMapGenerator:
+  - name: kube-service
+    behavior: merge
+    literals:
+      - DB_HOST=kube-service-prd.db.example.internal
+      - JWT_ISSUER_URI=https://issuer.example.invalid
+      - REDIS_HOST=kube-service-prd.cache.example.internal
+
+patches:
+  - patch: |-
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: kube-service
+      spec:
+        minReplicas: 3
+        maxReplicas: 10
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: kube-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: kube-service
+                resources:
+                  requests:
+                    cpu: 500m
+                    memory: 768Mi
+                  limits:
+                    memory: 1Gi
+  # O host de produção é o da base (kube-service.example.com); troque pelo seu domínio em base/ingress.yaml.

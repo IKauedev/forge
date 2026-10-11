@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kube-service
+  labels:
+    app.kubernetes.io/name: kube-service
+  # annotations:
+  #   cert-manager.io/cluster-issuer: letsencrypt   # se usar o cert-manager para emitir o certificado
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - kube-service.example.com
+      secretName: kube-service-tls
+  rules:
+    - host: kube-service.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-service
+                port:
+                  name: http

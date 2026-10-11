@@ -1,0 +1,12 @@
+# O Spring Boot sobe o compose.yaml e injeta a conexão dos serviços (ServiceConnection),
+# então não há datasource configurado aqui.
+spring:
+  docker:
+    compose:
+      enabled: true
+      lifecycle-management: start-only
+
+app:
+  security:
+    # Somente desenvolvimento: segredo HS256 do /dev/token. Nunca use fora do perfil local.
+    dev-secret: local-dev-only-secret-change-me-0123456789

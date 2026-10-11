@@ -148,6 +148,7 @@ func TestGolden(t *testing.T) {
 		{"payments-api", "Payments API", nil}, // padrões: both / jwt / none
 		{"orders-service", "Orders Service", template.Selection{"db": "mysql", "http": "webclient", "auth": "cognito", "cache": "redis"}},
 		{"slim-service", "Slim Service", template.Selection{"db": "none", "http": "feign", "auth": "none", "cache": "none"}},
+		{"kube-service", "Kube Service", template.Selection{"db": "mysql", "cache": "redis", "k8s": "kustomize"}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

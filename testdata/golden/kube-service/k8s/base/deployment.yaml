@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-service
+  labels:
+    app.kubernetes.io/name: kube-service
+spec:
+  # Sem "replicas": quem manda é o HPA (hpa.yaml). Fixar aqui faria cada apply voltar para esse número.
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kube-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kube-service
+    spec:
+      serviceAccountName: kube-service
+      automountServiceAccountToken: false
+      # Maior que o spring.lifecycle.timeout-per-shutdown-phase (30s) + o preStop.
+      terminationGracePeriodSeconds: 50
+      securityContext:
+        runAsNonRoot: true
+        # A imagem usa um usuário por nome; o UID numérico é o que o kubelet consegue verificar.
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: kube-service
+      containers:
+        - name: kube-service
+          # O pipeline troca pela imagem do ECR com a tag do commit (kustomize "images").
+          image: kube-service
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: kube-service
+          env:
+            # DB_HOST vem do ConfigMap (muda por ambiente); o Kubernetes expande $(DB_HOST) abaixo.
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: kube-service
+                  key: DB_HOST
+            - name: DB_URL
+              value: jdbc:mysql://$(DB_HOST):3306/kube_service
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: kube-service-db
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kube-service-db
+                  key: password
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 768Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          # Dá tempo de a JVM subir sem a liveness matar o pod: 30 tentativas x 5s.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              # Deixa o Service/Ingress tirarem o pod da rotação antes de o SIGTERM chegar à aplicação.
+              exec:
+                command: ["sleep", "10"]
+      volumes:
+        - name: tmp
+          emptyDir: {}

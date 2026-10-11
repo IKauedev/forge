@@ -1,0 +1,25 @@
+# Uso: docker compose -f compose.yaml -f compose.full.yaml up --build
+services:
+  app:
+    build: .
+    image: kube-service:local
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:mysql://db:3306/${DB_NAME:-kube_service}
+      DB_USERNAME: ${DB_USER:-kube_service}
+      DB_PASSWORD: ${DB_PASSWORD:-kube_service}
+      JWT_ISSUER_URI: ${JWT_ISSUER_URI:-https://issuer.example.invalid}
+      REDIS_HOST: redis
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness | grep -q UP"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
