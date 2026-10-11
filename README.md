@@ -73,9 +73,9 @@ forge update                                             # atualiza para a últi
   macOS) e registra a pasta no PATH do **usuário**; não precisa de administrador, preserva o PATH existente e é
   idempotente (rodar de novo atualiza a cópia). Abra um novo terminal depois. `forge uninstall` desfaz tudo.
 - `forge update` consulta a última release no GitHub, baixa o binário do seu sistema, **confere o SHA-256** do
-  `checksums.txt` e troca o executável (`--check` só informa; `--yes` não pergunta). Em repositório privado use
-  `GITHUB_TOKEN`/`GH_TOKEN` ou entre com `gh auth login`. O menu avisa de versão nova no máximo uma vez por dia
-  (`FORGE_NO_UPDATE_CHECK=1` desliga o aviso).
+  `checksums.txt` e troca o executável (`--check` só informa; `--yes` não pergunta). Não precisa de credencial;
+  `GITHUB_TOKEN`/`GH_TOKEN` (ou `gh auth login`) só servem para evitar o limite de requisições anônimas. O menu avisa
+  de versão nova no máximo uma vez por dia (`FORGE_NO_UPDATE_CHECK=1` desliga o aviso).
 - Homebrew: `brew install --cask ikauedev/tap/forge` (depois que o tap existir; ver Releases).
 
 Binários para linux, macOS e Windows (amd64/arm64) e `checksums.txt` ficam em cada release.

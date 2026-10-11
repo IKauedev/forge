@@ -412,8 +412,8 @@ Pipeline e Terraform reaproveitam os módulos das Fases 4 e 5. Integra com `forg
   instala), troca do executável em uso (renomeia para `.old`, que o `main` apaga na próxima execução). Aviso de versão
   nova com cache de 24 h, silencioso em qualquer falha. Instalada a partir de um build local (`dev`), toda release conta
   como mais nova.
-- Limite conhecido: o repositório é privado e ainda não há release, então `forge update` responde "nenhuma release
-  encontrada" até a `v1.0.0` sair.
+- Limite conhecido na época: o repositório era privado e ainda não havia release, então `forge update` respondia
+  "nenhuma release encontrada" até a `v1.0.0` sair (resolvido em 5.4).
 
 ## 5.2 Login nos frontends (OIDC com PKCE)
 
@@ -431,10 +431,10 @@ Pipeline e Terraform reaproveitam os módulos das Fases 4 e 5. Integra com `forg
 
 ## 5.4 Publicação da v1.0.0
 
-- Release **v1.0.0** publicada em https://github.com/IKauedev/forge/releases/tag/v1.0.0 (repositório **privado**, licença **MIT**): binários linux/macOS/Windows (amd64/arm64) e `checksums.txt`, gerados pelo GoReleaser v2.18.3 no workflow `release.yml` a partir da tag, com o CI da `main` verde.
+- Release **v1.0.0** publicada em https://github.com/IKauedev/forge/releases/tag/v1.0.0 (licença **MIT**): binários linux/macOS/Windows (amd64/arm64) e `checksums.txt`, gerados pelo GoReleaser v2.18.3 no workflow `release.yml` a partir da tag, com o CI da `main` verde.
 - Validado de ponta a ponta: o `forge` instalado na máquina (build `dev`) rodou `forge update`, baixou a release, conferiu o SHA-256 e se trocou para 1.0.0.
 - O Homebrew tap é opcional: sem o secret `HOMEBREW_TAP_TOKEN` o release sai só com os binários (o cask é gerado, mas não enviado). Para ativar: crie `ikauedev/homebrew-tap`, um token com escrita nele e o secret no repositório.
-- Com o repositório privado, `go install github.com/ikauedev/forge/cmd/forge@latest` e `forge update` precisam de credencial (`GITHUB_TOKEN`/`GH_TOKEN` ou `gh auth login`; para o Go, `GOPRIVATE=github.com/ikauedev/*`). Tornar o repositório público remove essa exigência.
+- O repositório foi criado **privado** e tornado **público** em 2026-10-11 (antes, varredura do histórico: nenhuma credencial real, só regex e checagens em testes). Com isso `go install github.com/ikauedev/forge/cmd/forge@latest` e `forge update` funcionam sem credencial; `GITHUB_TOKEN`/`GH_TOKEN` continuam aceitos para evitar o limite de requisições anônimas.
 
 ## 6. Backlog pós-v1.0
 
