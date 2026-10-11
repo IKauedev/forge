@@ -34,6 +34,10 @@ options:
     description: Cache da consulta de CEP
     values: [none, caffeine, redis]
     default: none
+  - name: k8s
+    description: Manifests Kubernetes (Kustomize) para dev, hml e prd, com pipeline de deploy (none = não gera)
+    values: [none, kustomize]
+    default: none
 
 # Estado em que o template de referência compila e é testado sem passar pelo forge.
 reference:
@@ -42,6 +46,7 @@ reference:
   http: both
   auth: jwt
   cache: caffeine
+  k8s: kustomize
 
 remove:
   - when: db=none
@@ -89,3 +94,9 @@ remove:
   - when: cache=none
     paths:
       - src/main/java/com/example/starterapi/config/CacheConfig.java
+  - when: k8s=none
+    paths:
+      - k8s/
+      - docs/KUBERNETES.md
+      - .github/workflows/deploy-k8s.yml
+      - .github/workflows/deploy-k8s-env.yml

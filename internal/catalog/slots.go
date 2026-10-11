@@ -84,6 +84,17 @@ var slotTemplates = map[string]string{
   }
 `,
 
+	// k8s/base/deployment.yaml: URL JDBC; o host vem do ConfigMap do ambiente ($(DB_HOST) é expandido
+	// pelo Kubernetes a partir da variável DB_HOST declarada antes)
+	"k8s-db-url": `            - name: DB_URL
+              value: jdbc:[[ .JDBCScheme ]]://$(DB_HOST):[[ .Port ]]/starter_api
+`,
+
+	// k8s/base/networkpolicy.yaml: porta de saída para o banco
+	"k8s-db-port": `        - port: [[ .Port ]]
+          protocol: TCP
+`,
+
 	// quarkus-api, pom.xml: extensão JDBC do Quarkus (quarkus-jdbc-<scheme>) e módulo do Flyway
 	"qk-db-deps": `    <dependency>
       <groupId>io.quarkus</groupId>

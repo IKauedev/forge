@@ -30,10 +30,14 @@ func manifest(t *testing.T) *template.Manifest {
 	return m
 }
 
-// allSelections devolve o produto cartesiano de todas as opções do manifesto.
+// allSelections devolve o produto cartesiano das opções do manifesto, sem a opção k8s (fixa no padrão):
+// ela só acrescenta arquivos e dobraria a matriz inteira. Os manifests Kubernetes têm a sua em k8s_test.go.
 func allSelections(m *template.Manifest) []template.Selection {
-	out := []template.Selection{{}}
+	out := []template.Selection{{k8sOpt: "none"}}
 	for _, o := range m.Options {
+		if o.Name == k8sOpt {
+			continue
+		}
 		var next []template.Selection
 		for _, base := range out {
 			for _, v := range o.Values {

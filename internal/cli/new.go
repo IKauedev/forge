@@ -27,6 +27,10 @@ var Version = "dev"
 const (
 	defaultPackage = "com.example"
 	defaultType    = templates.SpringAPI
+
+	// k8sOption liga os manifests Kubernetes; "--k8s" sem valor equivale a "--k8s kustomize".
+	k8sOption  = "k8s"
+	k8sEnabled = "kustomize"
 )
 
 // Answers reúne tudo o que define um projeto gerado.
@@ -106,15 +110,18 @@ template o forge avisa se falta algo na máquina para compilá-lo (Java, Docker,
 Com --yes (ou sem terminal) usa os padrões para o que não for informado.
 
 Opções por template:
-  spring-api   --package --db --vpc --http --auth (none|jwt|cognito) --cache
-  quarkus-api  --package --db --vpc --auth (none|jwt)
-  angular-app  (sem opções extras)
-  react-app    (sem opções extras)`,
+  spring-api   --package --db --vpc --http --auth (none|jwt|cognito) --cache --k8s
+  quarkus-api  --package --db --vpc --auth (none|jwt) --k8s
+  angular-app  --k8s
+  react-app    --k8s
+
+--k8s gera k8s/ (Kustomize: base + overlays dev, hml e prd), docs/KUBERNETES.md e o pipeline de deploy no cluster.`,
 		Example: `  forge new                                  # formulário completo
   forge new "Payments API"
   forge new payments-api --package com.empresa --http feign --auth cognito --cache redis
   forge new orders --type quarkus-api --db mysql
   forge new storefront --type react-app
+  forge new orders --type quarkus-api --k8s    # com manifests Kubernetes para dev, hml e prd
   forge new payments-api --yes`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -129,6 +136,9 @@ Opções por template:
 	for _, o := range opts {
 		f.options[o.Name] = cmd.Flags().String(o.Name, "",
 			fmt.Sprintf("%s (%s; padrão %s)", o.Description, strings.Join(o.Values, "|"), o.Default))
+		if o.Name == k8sOption {
+			cmd.Flags().Lookup(o.Name).NoOptDefVal = k8sEnabled // "--k8s" sozinho liga
+		}
 	}
 	return cmd
 }

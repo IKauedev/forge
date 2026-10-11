@@ -27,12 +27,17 @@ options:
     description: Autenticação (jwt = JWT verificado pelo JWKS do emissor; none = sem segurança)
     values: [none, jwt]
     default: jwt
+  - name: k8s
+    description: Manifests Kubernetes (Kustomize) para dev, hml e prd, com pipeline de deploy (none = não gera)
+    values: [none, kustomize]
+    default: none
 
 # Estado em que o template de referência compila e é testado sem passar pelo forge.
 reference:
   db: postgres
   vpc: new
   auth: jwt
+  k8s: kustomize
 
 remove:
   - when: db=none
@@ -57,3 +62,9 @@ remove:
       - src/main/java/com/example/starterapi/shared/security/
       - src/test/java/com/example/starterapi/adapter/in/web/SecurityEndpointsTest.java
       - src/test/java/com/example/starterapi/adapter/in/web/DevTokenResourceTest.java
+  - when: k8s=none
+    paths:
+      - k8s/
+      - docs/KUBERNETES.md
+      - .github/workflows/deploy-k8s.yml
+      - .github/workflows/deploy-k8s-env.yml

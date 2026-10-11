@@ -6,11 +6,24 @@ description: App React (Vite + TypeScript) com config em runtime, guards por rol
 # starterapp) são derivadas dele e trocadas pelas do projeto gerado.
 sentinel: starter-app
 
-options: []
+options:
+  - name: k8s
+    description: Manifests Kubernetes (Kustomize) para dev, hml e prd, com pipeline de deploy (none = não gera)
+    values: [none, kustomize]
+    default: none
 
-reference: {}
+reference:
+  k8s: kustomize
 
 next_steps:
   - npm ci
   - npm start # http://localhost:4200
   - npm test
+
+remove:
+  - when: k8s=none
+    paths:
+      - k8s/
+      - docs/KUBERNETES.md
+      - .github/workflows/deploy-k8s.yml
+      - .github/workflows/deploy-k8s-env.yml

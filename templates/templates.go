@@ -16,14 +16,14 @@ import "embed"
 //go:embed angular-app/.dockerignore angular-app/.editorconfig angular-app/.gitignore
 //go:embed angular-app/.prettierignore angular-app/.prettierrc
 //go:embed all:angular-app/.github all:angular-app/.husky
-//go:embed all:angular-app/docker all:angular-app/docs all:angular-app/infra
+//go:embed all:angular-app/docker all:angular-app/docs all:angular-app/infra all:angular-app/k8s
 //go:embed all:angular-app/public all:angular-app/src
 //go:embed react-app/*.json react-app/*.js react-app/*.ts react-app/*.html react-app/*.md react-app/*.yaml
 //go:embed react-app/Dockerfile
 //go:embed react-app/.dockerignore react-app/.editorconfig react-app/.gitignore
 //go:embed react-app/.prettierignore react-app/.prettierrc
 //go:embed all:react-app/.github all:react-app/.husky
-//go:embed all:react-app/docker all:react-app/docs all:react-app/infra
+//go:embed all:react-app/docker all:react-app/docs all:react-app/infra all:react-app/k8s
 //go:embed all:react-app/public all:react-app/src
 var FS embed.FS
 

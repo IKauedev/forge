@@ -158,11 +158,11 @@ func TestInteractiveAndFlagsProduceIdenticalOutput(t *testing.T) {
 }
 
 func TestPromptOnlyAsksForWhatIsMissing(t *testing.T) {
-	fp := &fakePrompter{pkg: "com.empresa", options: map[string]string{"db": "postgres", "vpc": "new", "http": "both", "auth": "jwt", "cache": "none"}}
+	fp := &fakePrompter{pkg: "com.empresa", options: map[string]string{"db": "postgres", "vpc": "new", "http": "both", "auth": "jwt", "cache": "none", "k8s": "none"}}
 	withPrompt(t, fp, true)
 	out := t.TempDir()
 	if _, err := run(t, "new", "complete", "--package", "com.empresa", "--out", out, "--no-git",
-		"--db", "postgres", "--vpc", "new", "--http", "both", "--auth", "jwt", "--cache", "none"); err != nil {
+		"--db", "postgres", "--vpc", "new", "--http", "both", "--auth", "jwt", "--cache", "none", "--k8s=none"); err != nil {
 		t.Fatal(err)
 	}
 	if fp.called {
@@ -399,6 +399,39 @@ func TestQuarkusRejectsOptionsItDoesNotHave(t *testing.T) {
 	} {
 		if _, err := run(t, append(args, "--out", t.TempDir(), "--no-git")...); err == nil {
 			t.Errorf("%v deveria falhar", args)
+		}
+	}
+}
+
+func TestK8sFlagAloneEnablesKustomize(t *testing.T) {
+	withPrompt(t, &fakePrompter{}, false)
+	out := t.TempDir()
+	if _, err := run(t, "new", "--k8s", "kube", "--yes", "--out", out, "--no-git"); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := project.Read(filepath.Join(out, "kube"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Options["k8s"] != "kustomize" {
+		t.Errorf("--k8s sozinho deveria ligar o kustomize: %+v", cfg.Options)
+	}
+	for _, env := range []string{"dev", "hml", "prd"} {
+		if _, err := os.Stat(filepath.Join(out, "kube", "k8s", "overlays", env, "kustomization.yaml")); err != nil {
+			t.Errorf("overlay %s ausente: %v", env, err)
+		}
+	}
+}
+
+func TestK8sIsOffByDefaultAndAcceptsNone(t *testing.T) {
+	withPrompt(t, &fakePrompter{}, false)
+	for _, args := range [][]string{{"plain"}, {"plain", "--k8s=none"}} {
+		out := t.TempDir()
+		if _, err := run(t, append([]string{"new"}, append(args, "--yes", "--out", out, "--no-git")...)...); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(filepath.Join(out, "plain", "k8s")); err == nil {
+			t.Errorf("%v não deveria gerar k8s/", args)
 		}
 	}
 }
