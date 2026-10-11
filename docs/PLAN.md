@@ -436,11 +436,21 @@ Pipeline e Terraform reaproveitam os módulos das Fases 4 e 5. Integra com `forg
 - O Homebrew tap é opcional: sem o secret `HOMEBREW_TAP_TOKEN` o release sai só com os binários (o cask é gerado, mas não enviado). Para ativar: crie `ikauedev/homebrew-tap`, um token com escrita nele e o secret no repositório.
 - O repositório foi criado **privado** e tornado **público** em 2026-10-11 (antes, varredura do histórico: nenhuma credencial real, só regex e checagens em testes). Com isso `go install github.com/ikauedev/forge/cmd/forge@latest` e `forge update` funcionam sem credencial; `GITHUB_TOKEN`/`GH_TOKEN` continuam aceitos para evitar o limite de requisições anônimas.
 
+## 5.5 Kubernetes (`--k8s`)
+
+- Opção `k8s` (`none` | `kustomize`, padrão `none`) nos quatro templates; `--k8s` sozinho liga (pflag `NoOptDefVal`), `--k8s=none` desliga. É **aditiva**: não altera `infra/` nem os workflows de ECS/S3.
+- Gera `k8s/base` (Deployment, Service, Ingress nginx, HPA, PDB, NetworkPolicy, ServiceAccount, ConfigMap por `configMapGenerator`) e `k8s/overlays/dev|hml|prd` (namespace `<app>-<amb>` com Pod Security `restricted`, HPA, recursos e host por ambiente), mais `docs/KUBERNETES.md`.
+- Variações por banco/auth/cache usam as diretivas de sempre. O banco entra por dois slots novos do catálogo (`k8s-db-url`, `k8s-db-port`); o `DB_URL` usa `$(DB_HOST)`, então o overlay só informa o host. Segredos (`<app>-db`) são criados fora do git.
+- Pipeline: `deploy-k8s.yml` + `deploy-k8s-env.yml` (ECR, OIDC, `aws eks update-kubeconfig`, `kubectl apply -k`, `rollout status`), dev -> hml -> prd com a mesma imagem. O push na `main` só dispara com `K8S_DEPLOY_ENABLED=true`, para não competir com o `deploy.yml`. O `ci.yml` ganha o job `k8s-manifests` (renderiza os overlays). Sem actions novas de terceiros.
+- Testes: `k8s_test.go` (arquivos, nomes, limites de 63 caracteres, variações db/auth/cache contra o catálogo, workflows com SHA fixo e sem access key, render com `kubectl kustomize` quando existe). A matriz principal fixa `k8s=none` para não dobrar de tamanho.
+- Fora do escopo (decisões a confirmar): Helm, provisionar o cluster EKS/access entries com Terraform, ingress alternativo ao nginx, `ExternalSecrets`. Os manifests não foram aplicados em nenhum cluster; só validados por render e `actionlint`.
+- Pendência anterior, não relacionada: `TestGolden` falha porque o Dependabot subiu o Maven Wrapper do template para 3.10.0 e o golden ainda tem 3.9.11 (`.mvn/wrapper/maven-wrapper.properties`).
+
 ## 6. Backlog pós-v1.0
 
 - MongoDB como segundo "perfil de persistência" (sem Flyway, Spring Data MongoDB, DocumentDB com aviso de compatibilidade parcial).
 - `--messaging sqs` com LocalStack no compose.
-- `--deploy eks` com manifests ou Helm chart.
+- `--deploy eks` com Helm chart e Terraform do cluster (manifests Kustomize já existem em `--k8s`, seção 5.5).
 - Módulos `forge add`: `observability` (OpenTelemetry), `shedlock`, `security-scan` (Checkov, SBOM).
 - Templates customizados via repositório Git (`forge new --template github.com/org/repo`).
 - Merge em três vias no `forge upgrade`.

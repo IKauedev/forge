@@ -22,6 +22,7 @@ forge new payments-api --yes                   # sem perguntas (usa os padrões)
 forge new orders --type quarkus-api --db mysql   # API Quarkus (LTS 3.40)
 forge new storefront --type angular-app        # app Angular + infra S3/CloudFront
 forge new webshop --type react-app             # app React (Vite) + infra S3/CloudFront
+forge new orders --k8s                         # com manifests Kubernetes (Kustomize) para dev, hml e prd
 forge list                                     # templates e opções
 forge upgrade --diff                           # o que mudou no template desde que o projeto foi gerado
 cd payments-api && ./mvnw verify               # JDK 25 + Docker
@@ -39,6 +40,7 @@ cd payments-api && ./mvnw verify               # JDK 25 + Docker
 | `--http` | `feign`, `webclient`, `both` | `both` | cliente HTTP do exemplo ViaCEP (com `both`, escolhe por `clients.viacep.impl`) |
 | `--auth` | `none`, `jwt`, `cognito` | `jwt` | `none` remove a segurança; `cognito` lê roles de `cognito:groups` (só `spring-api`; no `quarkus-api` use `JWT_ROLES_CLAIM`) |
 | `--cache` | `none`, `caffeine`, `redis` | `none` | `@Cacheable` na consulta; `redis` inclui serviço no compose e Testcontainers |
+| `--k8s` | `none`, `kustomize` | `none` | gera `k8s/` (base + overlays `dev`, `hml` e `prd`), `docs/KUBERNETES.md` e o pipeline `deploy-k8s.yml`; todos os templates. `--k8s` sozinho liga; para desligar use `--k8s=none` |
 | `--yes`, `-y` | | | não pergunta; usa os padrões |
 | `--no-git` | | | não executa `git init` |
 
@@ -48,7 +50,7 @@ para caber nos limites de nomes da AWS).
 
 `--package`, `--db`, `--vpc`, `--http`, `--auth` e `--cache` valem para `spring-api`; o `quarkus-api` aceita
 `--package`, `--db`, `--vpc` e `--auth none|jwt` (sem `--http`, `--cache` nem `cognito`). Usar uma opção que o
-`--type` não tem é erro. `angular-app` e `react-app` não têm opções além das comuns.
+`--type` não tem é erro. `angular-app` e `react-app` só têm `--k8s` além das comuns.
 
 Os bancos vêm de `catalog/databases.yaml` (`forge list` mostra os disponíveis).
 Cada projeto gerado traz um `.forge.yaml` com as respostas (versão do forge, template, nome, pacote e opções).
@@ -87,6 +89,13 @@ ficam fixadas por SHA. Variáveis e Environments a configurar: `docs/PIPELINE.md
 
 No `angular-app` e no `react-app` o deploy sincroniza o S3 (assets com hash em cache imutável; `index.html` e `config.json` sem
 cache), gera o `config.json` do ambiente e invalida o CloudFront.
+
+## Kubernetes gerado (`--k8s`)
+Com `--k8s` o projeto traz `k8s/base` (Deployment, Service, Ingress nginx, HPA, PodDisruptionBudget, NetworkPolicy e
+ServiceAccount) e `k8s/overlays/dev|hml|prd` (Kustomize: namespace, réplicas, recursos, host e endereços por ambiente),
+com pods não-root, probes e Pod Security `restricted`. O pipeline `deploy-k8s.yml` constrói a imagem uma vez, publica no
+ECR e promove a mesma imagem por dev, hml e prd num cluster EKS via OIDC (sem access key); o `ci.yml` renderiza os
+overlays a cada PR. Segredos nunca entram nos manifests. Passo a passo em `docs/KUBERNETES.md` do projeto gerado.
 
 ## Infra gerada (Terraform)
 Todo projeto traz `infra/` com `bootstrap/` (bucket de state, OIDC do GitHub e roles de deploy; roda uma vez, com

@@ -16,6 +16,7 @@ Plano completo em docs/PLAN.md. Execute UMA fase por vez.
 - templates/quarkus-api/ projeto de referência Quarkus 3.40 LTS (COMPILA sozinho)
 - templates/angular-app/ projeto de referência Angular (COMPILA sozinho)
 - templates/react-app/  projeto de referência React + Vite (COMPILA sozinho)
+- templates/*/k8s/       manifests Kustomize (base + overlays dev, hml, prd), opção `--k8s`
 - catalog/              dados: bancos (databases.yaml) e migrations por dialeto
 - testdata/golden/      saídas esperadas
 
@@ -26,6 +27,7 @@ Plano completo em docs/PLAN.md. Execute UMA fase por vez.
 - Template Quarkus: cd templates/quarkus-api && ./mvnw -q verify (JDK 25 + Docker; apague target/ depois)
 - Template Angular: cd templates/angular-app && npm ci && npm run lint && npm test -- --watch=false && npm run build
 - Template React: cd templates/react-app && npm ci && npm run lint && npm test && npm run build
+- Kubernetes (Kustomize): kubectl kustomize templates/<template>/k8s/overlays/<dev|hml|prd>
 - Terraform: terraform fmt -check -recursive && terraform init -backend=false && terraform validate
 
 ## Regras
