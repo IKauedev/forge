@@ -21,11 +21,11 @@ k8s/
     dev/  hml/  prd/          namespace, réplicas, host e URL da API de cada ambiente
 ```
 
-| Ambiente | Namespace | Réplicas (HPA) | Host | API (`API_BASE_URL`) |
-|---|---|---|---|---|
-| dev | `starter-app-dev` | 1 a 2 | `starter-app.dev.example.com` | `https://api.dev.example.com` |
-| hml | `starter-app-hml` | 2 a 3 | `starter-app.hml.example.com` | `https://api.hml.example.com` |
-| prd | `starter-app-prd` | 3 a 10 | `starter-app.example.com` | `https://api.example.com` |
+| Ambiente | Namespace         | Réplicas (HPA) | Host                          | API (`API_BASE_URL`)          |
+| -------- | ----------------- | -------------- | ----------------------------- | ----------------------------- |
+| dev      | `starter-app-dev` | 1 a 2          | `starter-app.dev.example.com` | `https://api.dev.example.com` |
+| hml      | `starter-app-hml` | 2 a 3          | `starter-app.hml.example.com` | `https://api.hml.example.com` |
+| prd      | `starter-app-prd` | 3 a 10         | `starter-app.example.com`     | `https://api.example.com`     |
 
 Cada namespace nasce com o Pod Security `restricted`; os pods do template já cumprem.
 
@@ -42,7 +42,7 @@ login, defina por overlay `AUTH_ENABLED=true`, `AUTH_ISSUER` e `AUTH_CLIENT_ID`.
 - **metrics-server**: sem ele o HPA não enxerga a CPU.
 - **Certificado TLS**: o `Ingress` espera o Secret `starter-app-tls`. Com o cert-manager, descomente a annotation
   `cert-manager.io/cluster-issuer` em `base/ingress.yaml`.
-- Um CNI que aplique NetworkPolicy (Calico, Cilium ou o *network policy* do VPC CNI). Sem isso as regras são ignoradas.
+- Um CNI que aplique NetworkPolicy (Calico, Cilium ou o _network policy_ do VPC CNI). Sem isso as regras são ignoradas.
 
 ## Antes do primeiro deploy
 
@@ -69,28 +69,28 @@ Não commite o `kustomization.yaml` com o bloco `images` que o `kustomize edit` 
 
 `deploy-k8s.yml` constrói a imagem uma vez, publica no ECR e promove **a mesma imagem** por dev, hml e prd com
 `deploy-k8s-env.yml` (que roda `kubectl apply -k` e espera o rollout). A autenticação na AWS é por **OIDC**, e o acesso
-ao cluster vem de uma *access entry* do EKS para a role de deploy.
+ao cluster vem de uma _access entry_ do EKS para a role de deploy.
 
-| Gatilho | O que acontece |
-|---|---|
-| Manual (`workflow_dispatch`) na `main` | build, push e deploy em dev -> hml -> prd |
-| Push na `main` | o mesmo, **somente** se a variável de repositório `K8S_DEPLOY_ENABLED` for `true` |
+| Gatilho                                | O que acontece                                                                    |
+| -------------------------------------- | --------------------------------------------------------------------------------- |
+| Manual (`workflow_dispatch`) na `main` | build, push e deploy em dev -> hml -> prd                                         |
+| Push na `main`                         | o mesmo, **somente** se a variável de repositório `K8S_DEPLOY_ENABLED` for `true` |
 
 A trava existe porque `deploy.yml` (S3 + CloudFront) também dispara no push da `main`. Use um dos dois pipelines por
 padrão. Se só usa Kubernetes, apague `deploy.yml`, `deploy-env.yml` e a pasta `infra/` e defina `K8S_DEPLOY_ENABLED=true`.
 
 Em **Settings -> Environments** crie `dev`, `hml` e `prd`. Recomendado: **Required reviewers** em `prd` (e, se quiser, em `hml`).
 
-| Variável | Onde | Obrigatória | Exemplo / padrão |
-|---|---|---|---|
-| `AWS_REGION` | repositório ou Environment | sim | `us-east-1` |
-| `AWS_ROLE_ARN` | **por Environment** | sim | `arn:aws:iam::123456789012:role/starter-app-dev-deploy` |
-| `EKS_CLUSTER` | Environment | não | padrão `starter-app-<ambiente>` |
-| `ECR_REPOSITORY` | repositório | não | padrão `starter-app` |
-| `K8S_DEPLOY_ENABLED` | repositório | não | `true` liga o deploy no push da `main` |
+| Variável             | Onde                       | Obrigatória | Exemplo / padrão                                        |
+| -------------------- | -------------------------- | ----------- | ------------------------------------------------------- |
+| `AWS_REGION`         | repositório ou Environment | sim         | `us-east-1`                                             |
+| `AWS_ROLE_ARN`       | **por Environment**        | sim         | `arn:aws:iam::123456789012:role/starter-app-dev-deploy` |
+| `EKS_CLUSTER`        | Environment                | não         | padrão `starter-app-<ambiente>`                         |
+| `ECR_REPOSITORY`     | repositório                | não         | padrão `starter-app`                                    |
+| `K8S_DEPLOY_ENABLED` | repositório                | não         | `true` liga o deploy no push da `main`                  |
 
 A role de cada ambiente confia no OIDC do GitHub (restrinja repositório **e** Environment), pode `eks:DescribeCluster`
-e precisa de permissão no cluster: crie uma *access entry* para ela e associe uma política de acesso restrita ao
+e precisa de permissão no cluster: crie uma _access entry_ para ela e associe uma política de acesso restrita ao
 namespace do ambiente (`AmazonEKSEditPolicy` com escopo `starter-app-dev`, por exemplo). O primeiro deploy também cria o
 namespace, então esse escopo precisa permitir isso ou o namespace deve existir antes.
 

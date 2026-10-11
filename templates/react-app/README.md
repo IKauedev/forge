@@ -87,6 +87,3 @@ A imagem (Nginx sem privilégios, porta 8080) gera o `config.json` a partir de `
 
 - Pipeline: [docs/PIPELINE.md](docs/PIPELINE.md)
 - Terraform (S3 privado + CloudFront com OAC): [docs/INFRA.md](docs/INFRA.md)
-<!-- forge:if k8s=kustomize -->
-- Kubernetes (Kustomize: dev, hml e prd): [docs/KUBERNETES.md](docs/KUBERNETES.md)
-<!-- forge:end -->

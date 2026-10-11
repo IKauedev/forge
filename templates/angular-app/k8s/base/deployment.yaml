@@ -87,4 +87,4 @@ spec:
             preStop:
               # Deixa o Service/Ingress tirarem o pod da rotação antes de o SIGTERM chegar ao nginx.
               exec:
-                command: ["sleep", "5"]
+                command: ['sleep', '5']
