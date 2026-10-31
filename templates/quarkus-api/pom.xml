@@ -23,7 +23,7 @@
     <archunit.version>1.5.1</archunit.version>
     <assertj.version>4.0.0-M1</assertj.version>
     <spotless.version>3.10.4</spotless.version>
-    <jacoco.version>0.8.15</jacoco.version>
+    <jacoco.version>0.8.16</jacoco.version>
     <jacoco.min.line.coverage>0.60</jacoco.min.line.coverage>
     <skipITs>true</skipITs>
   </properties>
