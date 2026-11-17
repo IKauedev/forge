@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # ---- runtime: Nginx sem privilégios, porta 8080 ----
-FROM nginxinc/nginx-unprivileged:1.30-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS runtime
 
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --chmod=755 docker/40-config.sh /docker-entrypoint.d/40-config.sh
