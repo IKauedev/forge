@@ -23,7 +23,7 @@ services:
   # forge:end
 
   adminer:
-    image: adminer:5
+    image: adminer:6
     profiles: ["tools"]
     ports:
       - "8081:8080"
